@@ -27,7 +27,7 @@ const Footer: React.FC = () => {
           {/* Social Links */}
           <div className="flex space-x-4 mt-2">
             <a
-              href="https://www.instagram.com/indiagrowup__?igsh=Ymttb3FoZGh1Zm1u"
+              href="https://www.instagram.com/"
               aria-label="Instagram"
               className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform hover:scale-110"
             >
