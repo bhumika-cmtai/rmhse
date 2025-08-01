@@ -53,6 +53,24 @@
   --color-purple-500: var(--purple-500);
   --color-purple-600: var(--purple-600);
   --color-white-light: var(--white-light);
+
+  /* new */
+  --color-green-500: var(--green-500);
+  --color-green-200: var(--green-200);
+  
+  --color-yellow-500: var(--yellow-500);
+  --color-yellow-100: var(--yellow-100);
+
+  --color-pink-500: var(--pink-500);
+  --color-pink-200: var(--pink-200);
+  --color-pink-100: var(--pink-100);
+
+  --color-red-500: var(--red-500);
+  --color-red-400: var(--red-400);
+
+  --color-blue-500: var(--blue-500);
+
+
 }
 
 body {
@@ -93,9 +111,23 @@ body {
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --green-500: #53BD01;
+  --green-400: ;
+  --green-300: ;
+  --green-200: #87DB47;
+  --green-100: ;
+  --yellow-500: #FBC902;
+  --yellow-100: #FEFBC1;
+  --pink-500: #960077;
+  --pink-200: #96007A17; /* 9% */
+  --pink-100: #FB0276;
+  --red-500: #A10201;
+  --red-400: #FB3402;
+  --blue-500: #140096;
+
   --light-pink: #FCF3F3;
   --pink-50: #FFF3F3;
-  --pink-100: #ffc6d2;
+  /* --pink-100: #ffc6d2; */
   --pink-200: #DFA2D5;
   --gray-subtitle: #5D5A5A; 
   --sea-green-100: #98FFCE; 

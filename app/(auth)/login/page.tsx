@@ -1,4 +1,3 @@
-// login.tsx (Updated)
 "use client";
 
 import React, { useState, Suspense, useEffect } from 'react';
@@ -19,69 +18,65 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import Image from 'next/image';
-import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch } from '@/lib/store';
-import { login, selectError, setError } from '@/lib/redux/authSlice';
+// import { useDispatch, useSelector } from 'react-redux';
+// import { AppDispatch } from '@/lib/store';
+// import { login, selectError, setError } from '@/lib/redux/authSlice';
 
 const LoginForm = () => {
   const router = useRouter();
-  const dispatch = useDispatch<AppDispatch>();
+  // const dispatch = useDispatch<AppDispatch>();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Using error from Redux state
-  const error = useSelector(selectError);
+  // const error = useSelector(selectError);
 
-   // This effect will catch and display login errors
-   useEffect(() => {
-    if (error) {
-      toast.error("incorrect credentials try again...")
-      dispatch(setError(null)); // Clear error after showing
-      setLoading(false); // Reset loading state on error
-    }
-  }, [error, dispatch]);
+  // useEffect(() => {
+  //   if (error) {
+  //     toast.error("Incorrect credentials. Try again.");
+  //     dispatch(setError(null));
+  //     setLoading(false);
+  //   }
+  // }, [error, dispatch]);
 
-  // Simplified handleSubmit with manual loading control
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true); // Manually set loading to true when submitting
+    setLoading(true);
 
-    try {
-      // The thunk returns the user object on success or null on failure
-      const user = await dispatch(login({ email, password, rememberMe }));
+    // Mock user check
+    const users = [
+      { email: "admin@gmail.com", password: "admin123", role: "admin" },
+      { email: "test@gmail.com", password: "test123", role: "user" },
+    ];
 
-      if (user) {
-        toast.success("Successfully logged in!");
-        // The cookie is already set inside the thunk, so we just redirect
-        if (user.role === 'admin') {
-          router.push('/dashboard/admin');
+    const matchedUser = users.find(
+      (u) => u.email === email && u.password === password
+    );
+
+    if (matchedUser) {
+      toast.success("Successfully logged in!");
+      setTimeout(() => {
+        if (matchedUser.role === "admin") {
+          router.push("/dashboard/admin");
         } else {
-          router.push('/dashboard/user');
+          router.push("/dashboard/user");
         }
-      } else {
-        // If login fails but doesn't throw, still reset loading
-        setLoading(false);
-      }
-    } catch (err) {
-      // Handle any unexpected errors
+      }, 1000);
+    } else {
+      toast.error("Invalid credentials");
       setLoading(false);
     }
   };
-  
+
   return (
     <Card className="w-full max-w-sm bg-gradient-to-br from-[#F0FAF7]/80 to-[#EFF8FF]/80 backdrop-blur-md rounded-3xl p-8 shadow-2xl border-none">
       <CardHeader className="text-center p-0 mb-6">
-        <CardTitle className="text-4xl font-bold text-gray-900">
-          Sign In
-        </CardTitle>
-        <CardDescription>
-          Enter your credentials to access your account.
-        </CardDescription>
+        <CardTitle className="text-4xl font-bold text-gray-900">Sign In</CardTitle>
+        <CardDescription>Enter your credentials to access your account.</CardDescription>
       </CardHeader>
-      
+
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4 p-0">
           <div className="space-y-2">
@@ -149,14 +144,13 @@ const LoginForm = () => {
 };
 
 const LoginPage = () => {
-  // ... (No changes needed in this part of the component)
   return (
     <section
       className="w-full min-h-screen relative flex items-center justify-center px-4 py-8 bg-[#F8FAFF] overflow-hidden"
       id="login"
     >
       <div className="w-full max-w-6xl flex flex-col md:flex-row items-center md:items-end justify-center gap-8 lg:gap-16 relative z-10">
-        
+
         {/* Left Side: Illustration */}
         <div className="flex justify-center">
           <Image
@@ -172,7 +166,6 @@ const LoginPage = () => {
         <Suspense fallback={<div className="w-full max-w-md h-[650px] bg-white/50 rounded-3xl animate-pulse"></div>}>
           <LoginForm />
         </Suspense>
-
       </div>
 
       {/* Background Blobs */}
@@ -191,7 +184,7 @@ const LoginPage = () => {
         className="absolute block top-[260px] -left-[150px] lg:top-[240px] lg:-left-[300px] lg:h-[600px] h-[200px] w-[200px] lg:w-[600px] bg-gradient-to-b from-purple-400 to-pink-200 rounded-full opacity-20"
       ></motion.div>
     </section>
-  )
-}
+  );
+};
 
 export default LoginPage;

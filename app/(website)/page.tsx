@@ -1,20 +1,24 @@
 import React from 'react';
+import Hero from './home/Hero';
+import AboutSection from './home/AboutUs';
+import Image from 'next/image';
+import WhyChooseUs from './home/WhyChooseUs';
 
 const Page = () => {
   return (
-    <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-      <div className="bg-white shadow-lg rounded-2xl p-8 max-w-md text-center border border-green-200">
-        <h1 className="text-3xl font-bold text-green-700 mb-4">We'll be back soon!</h1>
-        <p className="text-green-600 mb-6">
-          Our website is currently under maintenance. We’re working hard to improve your experience.
-        </p>
-        <p className="text-sm text-green-500">
-          For help, contact us at <br />
-          <a href="mailto:nikhil.chaudhary@cmtai.in" className="underline text-green-700 font-medium">
-            nikhil.chaudhary@cmtai.in
-          </a>
-        </p>
+    <div className="min-h-screen py-10">
+      <Hero />
+      <AboutSection />
+      <div className='flex justify-center items-center'>
+        <Image 
+        src="/posterImg.jpg"
+        alt="RMHSE Goolak India"
+        width={1280}
+        height={504}
+        className='lg:w-[1130px] md:w-[800px] h-auto object-contain border-[1px] border-black rounded-[20px]'
+        />
       </div>
+      <WhyChooseUs />
     </div>
   );
 };

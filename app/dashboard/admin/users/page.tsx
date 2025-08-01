@@ -58,7 +58,6 @@ const initialFormState: Omit<User, '_id' | 'createdOn'> = {
 // Helper function to check if a user is protected from deletion
 const isProtectedUser = (userId: string): boolean => {
   const numericId = parseInt(userId, 10);
-  // Check if the ID is a number and falls within the protected range 1-17
   return !isNaN(numericId) && numericId >= 1 && numericId <= 17;
 };
 
@@ -168,7 +167,7 @@ export default function Users() {
   const handleFormSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
     try {
       if (editUser && editUser._id) {
         const updatedUser = { ...editUser, ...form };
@@ -199,7 +198,6 @@ export default function Users() {
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
 
-    // Final check, although the button should be disabled
     if (isProtectedUser(userToDelete._id)) {
         toast.error("This user cannot be deleted.");
         setIsDeleteModalOpen(false);
@@ -207,7 +205,7 @@ export default function Users() {
     }
 
     setDeleteLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
     try {
       setAllUsers(prev => prev.filter(u => u._id !== userToDelete._id));
       toast.success(`User "${userToDelete.name}" deleted successfully.`);
@@ -217,10 +215,6 @@ export default function Users() {
     } finally {
       setDeleteLoading(false);
     }
-  };
-
-  const handleStatusToggle = () => {
-    setForm(prevForm => ({ ...prevForm, status: prevForm.status === 'Active' ? 'Block' : 'Active' }));
   };
 
   return (
@@ -267,11 +261,9 @@ export default function Users() {
                                 size="icon" 
                                 variant="ghost" 
                                 onClick={() => openDeleteModal(user)} 
-                                // title={protectedUser ? "Protected users cannot be deleted" : "Delete"}
-                                // disabled={protectedUser}
-                                // className={protectedUser ? "cursor-not-allowed" : ""}
+                                title="Delete"
                             >
-                                <Trash2 className={`w-4 h-4 ${protectedUser ? 'text-gray-400' : 'text-red-500'}`} />
+                                <Trash2 className="w-4 h-4 text-red-500" />
                             </Button>}
                         </div></TableCell>
                         </TableRow>
@@ -292,10 +284,10 @@ export default function Users() {
         </Pagination></div>
       )}
 
-      {/* Add/Edit Dialog remains the same */}
+      {/* Add/Edit Dialog */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[800px]">
-          <DialogHeader><DialogTitle>{editUser ? 'Edit User' : 'Add New User'}</DialogTitle><DialogDescription>{editUser ? 'Update details.' : 'Fill in details.'}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{editUser ? 'Edit User' : 'Add New User'}</DialogTitle><DialogDescription>{editUser ? 'Update the details for this user.' : 'Fill in the details to create a new user.'}</DialogDescription></DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4 mt-2 max-h-[70vh] overflow-y-auto pr-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label htmlFor="name">Name*</Label><Input id="name" name="name" value={form.name} onChange={handleFormChange} required /></div>
@@ -307,13 +299,26 @@ export default function Users() {
                 <div className="space-y-2"><Label htmlFor="role">Role*</Label><Select value={form.role} onValueChange={(value) => handleFormSelectChange('role', value)} required><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="div">Division</SelectItem><SelectItem value="dist">District</SelectItem><SelectItem value="stat">State</SelectItem><SelectItem value="bm">Board Member</SelectItem></SelectContent></Select></div>
                 <div className="space-y-2"><Label htmlFor="role_id">Primary Role ID*</Label><Input id="role_id" name="role_id" placeholder="e.g., DIV001" value={form.role_id[0] || ''} onChange={(e) => setForm(f => ({...f, role_id: [e.target.value]}))} required /></div>
                 <div className="space-y-2"><Label htmlFor="income">Income</Label><Input id="income" name="income" type="number" value={form.income || ''} onChange={handleFormChange}/></div>
-                {editUser ? (<div className="space-y-2"><Label>User Status</Label><div><Badge variant={form.status === 'Block' ? 'destructive' : 'default'}>{form.status}</Badge></div></div>) : (<div className="space-y-2"><Label htmlFor="status">Status</Label><Select value={form.status} onValueChange={(value) => handleFormSelectChange('status', value)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="Active">Active</SelectItem><SelectItem value="Block">Block</SelectItem></SelectContent></Select></div>)}
+                
+                {/* --- THIS IS THE FIX --- */}
+                {/* Always show a dropdown for status in both Add and Edit modes */}
+                <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={form.status} onValueChange={(value) => handleFormSelectChange('status', value)}>
+                        <SelectTrigger><SelectValue/></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Active">Active</SelectItem>
+                            <SelectItem value="Block">Block</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                {/* --- END OF FIX --- */}
+
                 <div className="space-y-2 md:col-span-2"><Label htmlFor="referred_by">Referred By</Label><Input id="referred_by" name="referred_by" placeholder="Referrer's Role ID" value={form.referred_by} onChange={handleFormChange}/></div>
                 <div className="space-y-2"><Label htmlFor="current_add">Current Address</Label><Textarea id="current_add" name="current_add" value={form.current_add} onChange={handleFormChange}/></div>
                 <div className="space-y-2"><Label htmlFor="permanent_add">Permanent Address</Label><Textarea id="permanent_add" name="permanent_add" value={form.permanent_add} onChange={handleFormChange}/></div>
             </div>
             <DialogFooter className="pt-4">
-              {editUser && (<Button type="button" variant={form.status === 'Active' ? 'destructive' : 'secondary'} onClick={handleStatusToggle} disabled={formLoading} className="mr-auto">{form.status === 'Active' ? 'Block User' : 'Activate User'}</Button>)}
               <DialogClose asChild><Button type="button" variant="outline" disabled={formLoading}>Cancel</Button></DialogClose>
               <Button type="submit" disabled={formLoading}>{formLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}{formLoading ? 'Saving...' : (editUser ? 'Update User' : 'Add User')}</Button>
             </DialogFooter>

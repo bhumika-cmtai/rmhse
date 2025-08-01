@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, Send, Hourglass, CheckCircle, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Wallet, Send, Hourglass, CheckCircle, XCircle, Info } from "lucide-react";
 import { toast } from "sonner";
 
 // Define the structure for a single withdrawal request
@@ -15,12 +17,13 @@ type WithdrawalRequest = {
   amount: number;
   status: 'pending' | 'approved' | 'rejected';
   date: Date;
+  rejectionReason?: string; // Optional field for the reason
 };
 
-// Mock data for existing withdrawal history.
+// Mock data for existing withdrawal history with a rejection reason
 const mockWithdrawals: WithdrawalRequest[] = [
   { id: 'w3', amount: 500.00, status: 'approved', date: new Date(2024, 5, 15) },
-  { id: 'w2', amount: 1200.50, status: 'rejected', date: new Date(2024, 6, 2) },
+  { id: 'w2', amount: 1200.50, status: 'rejected', date: new Date(2024, 6, 2), rejectionReason: "Invalid bank details provided. Please update your payment information." },
   { id: 'w1', amount: 250.25, status: 'approved', date: new Date(2024, 4, 20) },
 ];
 
@@ -42,25 +45,72 @@ const WithdrawalStatusBadge = ({ status }: { status: WithdrawalRequest['status']
   );
 };
 
-export default function WalletPage() {
-  // State for the wallet's total balance
-  const [walletBalance, setWalletBalance] = useState(2540.50);
-  // State for the user-entered withdrawal amount
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  // State for the list of all withdrawal requests
-  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>(mockWithdrawals);
+// --- Request Info Modal Component ---
+const RequestInfoModal = ({
+    open,
+    onOpenChange,
+    request,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    request: WithdrawalRequest | null;
+  }) => {
+    if (!request) return null;
+  
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Details</DialogTitle>
+            <DialogDescription>
+              Viewing details for your withdrawal request made on {request.date.toLocaleDateString()}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Status Section (Always shows) */}
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <div>
+                <WithdrawalStatusBadge status={request.status} />
+              </div>
+            </div>
+  
+            {/* Reason Section (Only shows if rejected) */}
+            {request.status === 'rejected' && (
+              <div className="space-y-2">
+                <Label>Reason for Rejection</Label>
+                <p className="text-sm font-medium p-3 bg-muted rounded-md border">
+                  {request.rejectionReason || "No reason provided."}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="sm:justify-end">
+            <DialogClose asChild>
+              <Button type="button">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
 
-  // Memoize checking if a request is already pending to prevent re-renders
+export default function WalletPage() {
+  const [walletBalance, setWalletBalance] = useState(2540.50);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>(mockWithdrawals);
+  
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [requestToShowInfo, setRequestToShowInfo] = useState<WithdrawalRequest | null>(null);
+
   const hasPendingRequest = useMemo(() => 
     withdrawals.some(req => req.status === 'pending'), 
     [withdrawals]
   );
 
-  // This function handles the new withdrawal request
   const handleWithdrawRequest = () => {
     const amount = parseFloat(withdrawAmount);
 
-    // --- Validation ---
     if (hasPendingRequest) {
       toast.error("You already have a withdrawal request pending.");
       return;
@@ -74,7 +124,6 @@ export default function WalletPage() {
       return;
     }
 
-    // --- Create and add the new request ---
     const newRequest: WithdrawalRequest = {
       id: `w${Date.now()}`,
       amount: amount,
@@ -82,17 +131,16 @@ export default function WalletPage() {
       date: new Date(),
     };
 
-    // Add the new request to the top of the list
     setWithdrawals([newRequest, ...withdrawals]);
-
-    // Update balance (optional, you might want to wait for approval)
-    // setWalletBalance(prev => prev - amount); 
-
     toast.success(`Request to withdraw ₹${amount.toFixed(2)} has been sent!`);
-    setWithdrawAmount(""); // Clear the input field
+    setWithdrawAmount("");
   };
   
-  // Sort withdrawals by date to show the most recent first
+  const handleOpenInfoModal = (request: WithdrawalRequest) => {
+    setRequestToShowInfo(request);
+    setIsInfoModalOpen(true);
+  };
+
   const sortedWithdrawals = useMemo(() => 
     withdrawals.sort((a, b) => b.date.getTime() - a.date.getTime()), 
     [withdrawals]
@@ -104,9 +152,7 @@ export default function WalletPage() {
         <h1 className="text-3xl font-bold">My Wallet</h1>
       </div>
 
-      {/* Top Half: Balance and Withdraw Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Total Balance Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
@@ -122,7 +168,6 @@ export default function WalletPage() {
           </CardContent>
         </Card>
 
-        {/* Withdraw Request Card */}
         <Card>
           <CardHeader>
             <CardTitle>Request a Withdrawal</CardTitle>
@@ -164,7 +209,6 @@ export default function WalletPage() {
         </Card>
       </div>
 
-      {/* Bottom Half: Withdrawal History */}
       <Card>
         <CardHeader>
           <CardTitle>Withdrawal History</CardTitle>
@@ -177,6 +221,7 @@ export default function WalletPage() {
                         <TableHead>Date</TableHead>
                         <TableHead className="text-right">Amount</TableHead>
                         <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -188,11 +233,21 @@ export default function WalletPage() {
                                 <TableCell className="text-center">
                                     <WithdrawalStatusBadge status={req.status} />
                                 </TableCell>
+                                <TableCell className="text-center">
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      onClick={() => handleOpenInfoModal(req)}
+                                      title="View Details"
+                                    >
+                                      <Info className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
                             </TableRow>
                         ))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={3} className="text-center h-24">
+                            <TableCell colSpan={4} className="text-center h-24">
                                 You have not made any withdrawal requests yet.
                             </TableCell>
                         </TableRow>
@@ -201,6 +256,13 @@ export default function WalletPage() {
             </Table>
         </CardContent>
       </Card>
+
+      {/* Request Info Modal */}
+      <RequestInfoModal
+        open={isInfoModalOpen}
+        onOpenChange={setIsInfoModalOpen}
+        request={requestToShowInfo}
+      />
     </div>
   );
 }
