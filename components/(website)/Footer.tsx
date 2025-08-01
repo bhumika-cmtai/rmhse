@@ -2,6 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+// import { Play, Facebook, Phone } from "lucide-react";
 
 const Footer: React.FC = () => {
   return (
@@ -26,13 +27,7 @@ const Footer: React.FC = () => {
 
           {/* Social Links */}
           <div className="flex space-x-4 mt-2">
-            <a
-              href="https://www.instagram.com/"
-              aria-label="Instagram"
-              className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform hover:scale-110"
-            >
-              <Image alt="Instagram icon" src="/instagram.png" width={30} height={30} />
-            </a>
+            
             <a
               href=""
               aria-label="YouTube"
@@ -42,18 +37,18 @@ const Footer: React.FC = () => {
             </a>
             <a
               href=""
-              aria-label="Twitter"
+              aria-label="WhatsApp"
               className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform hover:scale-110"
             >
-              <Image alt="Twitter icon" src="/twitter.png" width={30} height={30} />
+              <Image alt="WhatsApp icon" src="/whatsapp.png" width={30} height={30} />
             </a>
-            <a
+            {/* <a
               href=""
               aria-label="LinkedIn"
               className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform hover:scale-110"
             >
               <Image alt="LinkedIn icon" src="/linkedin.png" width={30} height={30} />
-            </a>
+            </a> */}
           </div>
         </div>
 
