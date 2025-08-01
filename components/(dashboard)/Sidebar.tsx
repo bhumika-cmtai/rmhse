@@ -15,7 +15,8 @@ import {
   BookUser,
   BadgeCheck,
   ShieldCheck,
-  ClipboardPlus
+  ClipboardPlus,
+  Wallet
 } from "lucide-react";
 
 const navigation = [
@@ -25,6 +26,7 @@ const navigation = [
   { name: "Districts", href: "/dashboard/admin/districts", icon: Contact },
   { name: "States", href: "/dashboard/admin/states", icon: Network },
   { name: "Board Members", href: "/dashboard/admin/board-members", icon: BookUser },
+  { name: "Wallet", href: "/dashboard/admin/wallet", icon: Wallet },
   { name: "Withdraw Request", href: "/dashboard/admin/withdraw-requests", icon: BadgeCheck },
   { name: "Extend Request", href: "/dashboard/admin/extend-requests", icon: ShieldCheck },
   {name: "Report", href: "/dashboard/admin/report", icon: ClipboardPlus},

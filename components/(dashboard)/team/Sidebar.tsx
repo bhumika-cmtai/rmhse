@@ -16,10 +16,10 @@ import {
 } from "lucide-react";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard/team", icon: LayoutGrid },
-  { name: "Refered User List", href: "/dashboard/team/user-list", icon: Users },
-  {name: "Wallet", href: "/dashboard/team/wallet", icon: Wallet},
-  { name: "Setting", href: "/dashboard/team/setting", icon: Settings },
+  { name: "Dashboard", href: "/dashboard/user", icon: LayoutGrid },
+  { name: "Reffered Users", href: "/dashboard/user/user-list", icon: Users },
+  {name: "Wallet", href: "/dashboard/user/wallet", icon: Wallet},
+  { name: "Setting", href: "/dashboard/user/setting", icon: Settings },
   { name: "Logout", href: "/logout", icon: LogOut },
 ];
 

@@ -7,8 +7,8 @@ import { ReduxProvider } from "@/lib/provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "GrowUp | Start Growing",
-  description: "GrowUp is a platform for small businesses to grow their business",
+  title: "RMHSE",
+  description: "RHMSE is a platform for small businesses to grow their business",
 };
 
 export default function RootLayout({

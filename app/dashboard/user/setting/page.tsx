@@ -145,8 +145,8 @@ const SettingsPage = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8 bg-gray-50 min-h-screen">
-      <Card className="max-w-4xl mx-auto shadow-md">
+    <div className=" mx-auto   min-h-screen">
+      <Card className=" mx-auto shadow-md">
         <CardHeader className="text-center md:text-left">
           <CardTitle className="text-3xl font-bold">Account Settings</CardTitle>
           <CardDescription>View and manage your personal, document, and financial details.</CardDescription>

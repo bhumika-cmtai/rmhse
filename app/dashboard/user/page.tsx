@@ -19,28 +19,40 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function Dashboard() {
     const dispatch = useDispatch<AppDispatch>();
 
-    const user = useSelector(selectUser);
+    // const user = useSelector(selectUser);
     const authLoading = useSelector(selectAuthLoading);
     const clientsByOwner = useSelector(selectClientsByOwner);
     const clientLoading = useSelector(selectClientLoading);
 
-    useEffect(() => {
-        if (!user) {
-            dispatch(fetchCurrentUser());
-        }
-    }, [dispatch, user]);
+    // useEffect(() => {
+    //     if (!user) {
+    //         dispatch(fetchCurrentUser());
+    //     }
+    // }, [dispatch, user]);
 
-    useEffect(() => {
-        if (user?.phoneNumber && clientsByOwner.length === 0) {
-            dispatch(fetchClientsByOwner(user.phoneNumber));
-        }
-    }, [dispatch, user, clientsByOwner.length]); 
-    const totalClaims = useMemo(() => {
-        if (!clientsByOwner) return 0;
-        return clientsByOwner.reduce((accumulator, group) => accumulator + group.clients.length, 0);
-    }, [clientsByOwner]);
+    // useEffect(() => {
+    //     if (user?.phoneNumber && clientsByOwner.length === 0) {
+    //         dispatch(fetchClientsByOwner(user.phoneNumber));
+    //     }
+    // }, [dispatch, user, clientsByOwner.length]); 
+    const user = {
+        income: 340,
+        limit: 50,
+    }
+    const totalUsers = 23
+    // const totalClaims = useMemo(() => {
+    //     if (!clientsByOwner) return 0;
+    //     return clientsByOwner.reduce((accumulator, group) => accumulator + group.clients.length, 0);
+    // }, [clientsByOwner]);
     
     const stats = [
+        
+        {
+            name: "Total Users",
+            value: totalUsers.toLocaleString(),
+            icon: FileText,
+            trend: "up",
+        },
         {
             name: "Total Income",
             value: user?.income ? `₹${user.income.toLocaleString()}` : "₹0",
@@ -48,11 +60,11 @@ export default function Dashboard() {
             trend: "up", 
         },
         {
-            name: "Total Data Claims",
-            value: totalClaims.toLocaleString(),
-            icon: FileText,
-            trend: "up",
-        },
+            name: "Total Limits",
+            value: user?.limit ? `${user.limit.toLocaleString()}` : "0",
+            icon: Users,
+            trend: "up", 
+        }
     ];
 
     const isLoading = authLoading || (clientLoading && clientsByOwner.length === 0);

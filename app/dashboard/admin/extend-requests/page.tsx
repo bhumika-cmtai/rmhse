@@ -1,44 +1,16 @@
-// app/dashboard/extend-request/page.tsx
-
 "use client";
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle } from "lucide-react";
-
-// A generic confirmation modal for the approval action
-const ConfirmationModal = ({
-  open,
-  onOpenChange,
-  title,
-  description,
-  onConfirm,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  description: string;
-  onConfirm: () => void;
-}) => {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="sm:justify-end">
-           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-           <Button type="button" variant="default" onClick={onConfirm}>Confirm Approve</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Edit } from "lucide-react";
+import { toast } from "sonner";
 
 // Define a type for a single limit extension request
 type ExtendRequest = {
@@ -46,43 +18,125 @@ type ExtendRequest = {
   userName: string;
   limit: string; // The new requested limit
   requestedAt: string;
-  status: 'Pending' | 'Approved';
+  status: 'Processing'|'Pending' | 'Approved' | 'Rejected';
+  rejectionReason?: string;
 };
 
-// Sample data for the extend limit requests table
+// Sample data with all possible statuses
 const sampleExtendRequests: ExtendRequest[] = [
   { id: "ER001", userName: "Alice Johnson", limit: "50", requestedAt: "2024-07-28", status: "Pending" },
   { id: "ER002", userName: "Bob Williams", limit: "100", requestedAt: "2024-07-27", status: "Approved" },
   { id: "ER003", userName: "Charlie Brown", limit: "75", requestedAt: "2024-07-26", status: "Pending" },
-  { id: "ER004", userName: "Diana Miller", limit: "50", requestedAt: "2024-07-25", status: "Pending" },
+  { id: "ER004", userName: "Diana Miller", limit: "50", requestedAt: "2024-07-25", status: "Rejected", rejectionReason: "Insufficient activity." },
   { id: "ER005", userName: "Ethan Davis", limit: "200", requestedAt: "2024-07-24", status: "Approved" },
 ];
 
+// --- Edit Request Modal Component (similar to withdraw_requests.tsx) ---
+const EditRequestModal = ({
+  open,
+  onOpenChange,
+  request,
+  onUpdateRequest,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  request: ExtendRequest | null;
+  onUpdateRequest: (id: string, newStatus: ExtendRequest['status'], reason?: string) => void;
+}) => {
+  const [newStatus, setNewStatus] = useState<ExtendRequest['status']>('Pending');
+  const [reason, setReason] = useState("");
+
+  // Populate the modal's state when a request is selected
+  useEffect(() => {
+    if (request) {
+      setNewStatus(request.status);
+      setReason(request.rejectionReason || "");
+    }
+  }, [request]);
+
+  if (!request) return null;
+
+  const isRejecting = newStatus === 'Rejected';
+  const isSubmitDisabled = isRejecting && !reason.trim();
+
+  const handleSubmit = () => {
+    // If approving, ensure the reason is cleared.
+    const finalReason = newStatus === 'Approved' ? undefined : reason;
+    onUpdateRequest(request.id, newStatus, finalReason);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Update Extend Limit Request</DialogTitle>
+          <DialogDescription>
+            Manage the request for <span className="font-semibold">{request.userName}</span> for a new limit of <span className="font-semibold">{request.limit}</span>.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+            <div className="space-y-2">
+                <Label htmlFor="status-select">Status</Label>
+                <Select value={newStatus} onValueChange={(value) => setNewStatus(value as ExtendRequest['status'])}>
+                    <SelectTrigger id="status-select">
+                        <SelectValue placeholder="Select a status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Approved">Approved</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+          
+            {isRejecting && (
+              <div className="space-y-2">
+                <Label htmlFor="rejection-reason">Reason for Rejection</Label>
+                <Textarea 
+                  id="rejection-reason" 
+                  placeholder="Provide a clear reason..." 
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </div>
+            )}
+        </div>
+
+        <DialogFooter className="sm:justify-end gap-2">
+           <DialogClose asChild>
+             <Button type="button" variant="outline">Cancel</Button>
+           </DialogClose>
+           <Button type="button" onClick={handleSubmit} disabled={isSubmitDisabled}>
+             Update Request
+           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function ExtendRequestPage() {
-  // State for controlling the approval modal
-  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-  
-  // State to hold the request being approved
-  const [requestToApprove, setRequestToApprove] = useState<ExtendRequest | null>(null);
+  const [extendRequests, setExtendRequests] = useState<ExtendRequest[]>(sampleExtendRequests);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [requestToEdit, setRequestToEdit] = useState<ExtendRequest | null>(null);
 
   // --- Modal Handling ---
-  
-  const handleOpenApproveModal = (request: ExtendRequest) => {
-    setRequestToApprove(request);
-    setIsApproveModalOpen(true);
+  const handleOpenEditModal = (request: ExtendRequest) => {
+    setRequestToEdit(request);
+    setIsEditModalOpen(true);
   };
   
-  // --- Action Handlers (for demonstration) ---
-  
-  const handleConfirmApprove = () => {
-    if (!requestToApprove) return;
+  // --- Update Action ---
+  const handleUpdateRequest = (id: string, newStatus: ExtendRequest['status'], reason?: string) => {
+    setExtendRequests(prev => 
+      prev.map(req => 
+        req.id === id ? { ...req, status: newStatus, rejectionReason: reason } : req
+      )
+    );
     
-    console.log(`Approving limit extension for request ID: ${requestToApprove.id} to new limit ${requestToApprove.limit}`);
-    // In a real app, you would dispatch an action here to update the user's limit and the request status.
-    
-    // For demonstration, we'll just log it and close the modal.
-    setIsApproveModalOpen(false);
-    setRequestToApprove(null);
+    toast.success(`Request has been updated to "${newStatus}".`);
+    setIsEditModalOpen(false);
   };
 
   return (
@@ -102,30 +156,42 @@ export default function ExtendRequestPage() {
                   <TableHead>New Limit</TableHead>
                   <TableHead>Requested At</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right pr-6">Actions</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead className="text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sampleExtendRequests.map((request, idx) => (
+                {extendRequests.map((request, idx) => (
                   <TableRow key={request.id}>
                     <TableCell>{idx + 1}</TableCell>
                     <TableCell className="font-medium">{request.userName}</TableCell>
                     <TableCell>{request.limit}</TableCell>
                     <TableCell>{request.requestedAt}</TableCell>
                     <TableCell>
-                      <Badge variant={request.status === 'Approved' ? 'default' : 'secondary'}>
+                      <Badge 
+                        variant={
+                          request.status === 'Approved' ? 'default' : 
+                          request.status === 'Rejected' ? 'destructive' : 'secondary'
+                        }
+                      >
                         {request.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell>
+                      {request.status === 'Rejected' && request.rejectionReason && (
+                        <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                          {request.rejectionReason}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
                       <Button 
                         size="sm" 
-                        variant="default" 
-                        onClick={() => handleOpenApproveModal(request)}
-                        disabled={request.status === 'Approved'}
+                        variant="outline"
+                        onClick={() => handleOpenEditModal(request)}
+                        disabled={request.status !== 'Pending'}
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Approve
+                        <Edit className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -136,13 +202,12 @@ export default function ExtendRequestPage() {
         </CardContent>
       </Card>
 
-      {/* Approve Confirmation Modal */}
-      <ConfirmationModal
-        open={isApproveModalOpen}
-        onOpenChange={setIsApproveModalOpen}
-        title="Confirm Limit Extension"
-        description={`Are you sure you want to approve the limit extension to ${requestToApprove?.limit} for ${requestToApprove?.userName}?`}
-        onConfirm={handleConfirmApprove}
+      {/* Edit Request Modal */}
+      <EditRequestModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        request={requestToEdit}
+        onUpdateRequest={handleUpdateRequest}
       />
     </div>
   );

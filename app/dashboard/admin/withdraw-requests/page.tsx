@@ -1,39 +1,116 @@
-// app/dashboard/withdraw/page.tsx
-
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Edit } from "lucide-react";
+import { toast } from "sonner";
 
-// A generic confirmation modal for the approval action
-const ConfirmationModal = ({
+// Define a type for a single withdrawal request with updated fields
+type WithdrawRequest = {
+  id: string;
+  userName: string;
+  amount: string;
+  requestedAt: string;
+  status: 'Processing'|'Pending' | 'Approved' | 'Rejected';
+  rejectionReason?: string; // Optional field for the reason
+};
+
+// Sample data with all possible statuses and a rejection reason
+const sampleWithdrawRequests: WithdrawRequest[] = [
+  { id: "WR001", userName: "Alice Johnson", amount: "500.00", requestedAt: "2024-07-28", status: "Pending" },
+  { id: "WR002", userName: "Bob Williams", amount: "1200.50", requestedAt: "2024-07-27", status: "Pending" },
+  { id: "WR003", userName: "Charlie Brown", amount: "75.25", requestedAt: "2024-07-26", status: "Approved" },
+  { id: "WR004", userName: "Diana Miller", amount: "2500.00", requestedAt: "2024-07-25", status: "Rejected", rejectionReason: "User account under review." },
+  { id: "WR005", userName: "Ethan Davis", amount: "300.00", requestedAt: "2024-07-24", status: "Approved" },
+  { id: "WR006", userName: "Fiona White", amount: "850.00", requestedAt: "2024-07-23", status: "Pending" },
+];
+
+// --- Edit Request Modal Component ---
+const EditRequestModal = ({
   open,
   onOpenChange,
-  title,
-  description,
-  onConfirm,
+  request,
+  onUpdateRequest,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  title: string;
-  description: string;
-  onConfirm: () => void;
+  request: WithdrawRequest | null;
+  onUpdateRequest: (id: string, newStatus: WithdrawRequest['status'], reason?: string) => void;
 }) => {
+  const [newStatus, setNewStatus] = useState<WithdrawRequest['status']>('Pending');
+  const [reason, setReason] = useState("");
+
+  // Populate the modal's state when a request is selected
+  useEffect(() => {
+    if (request) {
+      setNewStatus(request.status);
+      setReason(request.rejectionReason || "");
+    }
+  }, [request]);
+
+  if (!request) return null;
+
+  const isRejecting = newStatus === 'Rejected';
+  const isSubmitDisabled = isRejecting && !reason.trim();
+
+  const handleSubmit = () => {
+    // If approving, ensure the reason is cleared.
+    const finalReason = newStatus === 'Approved' ? undefined : reason;
+    onUpdateRequest(request.id, newStatus, finalReason);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>Update Withdrawal Request</DialogTitle>
+          <DialogDescription>
+            Manage the request for <span className="font-semibold">{request.userName}</span> of <span className="font-semibold">₹{request.amount}</span>.
+          </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="sm:justify-end">
-           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-           <Button type="button" variant="default" onClick={onConfirm}>Confirm Approve</Button>
+        
+        <div className="space-y-4 py-4">
+            <div className="space-y-2">
+                <Label htmlFor="status-select">Status</Label>
+                <Select value={newStatus} onValueChange={(value) => setNewStatus(value as WithdrawRequest['status'])}>
+                    <SelectTrigger id="status-select">
+                        <SelectValue placeholder="Select a status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Approved">Approved</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+          
+            {isRejecting && (
+              <div className="space-y-2">
+                <Label htmlFor="rejection-reason">Reason for Rejection</Label>
+                <Textarea 
+                  id="rejection-reason" 
+                  placeholder="Provide a clear reason..." 
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </div>
+            )}
+        </div>
+
+        <DialogFooter className="sm:justify-end gap-2">
+           <DialogClose asChild>
+             <Button type="button" variant="outline">Cancel</Button>
+           </DialogClose>
+           <Button type="button" onClick={handleSubmit} disabled={isSubmitDisabled}>
+             Update Request
+           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -41,55 +118,33 @@ const ConfirmationModal = ({
 };
 
 
-// Define a type for a single withdrawal request
-type WithdrawRequest = {
-  id: string;
-  userName: string;
-  amount: string;
-  requestedAt: string;
-  status: 'Pending' | 'Approved';
-};
-
-// Sample data for the withdrawal requests table
-const sampleWithdrawRequests: WithdrawRequest[] = [
-  { id: "WR001", userName: "Alice Johnson", amount: "500.00", requestedAt: "2024-07-28", status: "Pending" },
-  { id: "WR002", userName: "Bob Williams", amount: "1200.50", requestedAt: "2024-07-27", status: "Pending" },
-  { id: "WR003", userName: "Charlie Brown", amount: "75.25", requestedAt: "2024-07-26", status: "Approved" },
-  { id: "WR004", userName: "Diana Miller", amount: "2500.00", requestedAt: "2024-07-25", status: "Pending" },
-  { id: "WR005", userName: "Ethan Davis", amount: "300.00", requestedAt: "2024-07-24", status: "Approved" },
-];
-
 export default function WithdrawPage() {
-  // State for controlling the approval modal
-  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [withdrawals, setWithdrawals] = useState<WithdrawRequest[]>(sampleWithdrawRequests);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [requestToEdit, setRequestToEdit] = useState<WithdrawRequest | null>(null);
   
-  // State to hold the request being approved
-  const [requestToApprove, setRequestToApprove] = useState<WithdrawRequest | null>(null);
-
   // --- Modal Handling ---
-  
-  const handleOpenApproveModal = (request: WithdrawRequest) => {
-    setRequestToApprove(request);
-    setIsApproveModalOpen(true);
+  const handleOpenEditModal = (request: WithdrawRequest) => {
+    setRequestToEdit(request);
+    setIsEditModalOpen(true);
   };
   
-  // --- Action Handlers (for demonstration) ---
-  
-  const handleConfirmApprove = () => {
-    if (!requestToApprove) return;
+  // --- Update Action ---
+  const handleUpdateRequest = (id: string, newStatus: WithdrawRequest['status'], reason?: string) => {
+    setWithdrawals(prev => 
+      prev.map(req => 
+        req.id === id ? { ...req, status: newStatus, rejectionReason: reason } : req
+      )
+    );
     
-    console.log(`Approving withdrawal request ID: ${requestToApprove.id} for ₹${requestToApprove.amount}`);
-    // In a real app, you would dispatch an action here to update the request status in your backend.
-    
-    // For demonstration, we'll just log it and close the modal.
-    setIsApproveModalOpen(false);
-    setRequestToApprove(null);
+    toast.success(`Request has been updated to "${newStatus}".`);
+    setIsEditModalOpen(false);
   };
 
   return (
     <div className="w-full mx-auto mt-2">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-        <h1 className="text-3xl font-bold">Withdraw Payment Requests</h1>
+        <h1 className="text-3xl font-bold">Withdrawal Requests</h1>
       </div>
 
       <Card>
@@ -103,30 +158,43 @@ export default function WithdrawPage() {
                   <TableHead>Amount</TableHead>
                   <TableHead>Requested At</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right pr-6">Actions</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead className="text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sampleWithdrawRequests.map((request, idx) => (
+                {withdrawals.map((request, idx) => (
                   <TableRow key={request.id}>
                     <TableCell>{idx + 1}</TableCell>
                     <TableCell className="font-medium">{request.userName}</TableCell>
                     <TableCell>{`₹${request.amount}`}</TableCell>
                     <TableCell>{request.requestedAt}</TableCell>
                     <TableCell>
-                      <Badge variant={request.status === 'Approved' ? 'default' : 'secondary'}>
+                      <Badge 
+                        variant={
+                          request.status === 'Approved' ? 'default' : 
+                          request.status === 'Rejected' ? 'destructive' : 'secondary'
+                        }
+                      >
                         {request.status}
                       </Badge>
+                      
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell>
+                      {request.status === 'Rejected' && request.rejectionReason && (
+                        <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                          {request.rejectionReason}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
                       <Button 
                         size="sm" 
-                        variant="default" 
-                        onClick={() => handleOpenApproveModal(request)}
-                        disabled={request.status === 'Approved'}
+                        variant="outline"
+                        onClick={() => handleOpenEditModal(request)}
+                        disabled={request.status !== 'Pending'}
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Approve
+                        <Edit className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -137,13 +205,12 @@ export default function WithdrawPage() {
         </CardContent>
       </Card>
 
-      {/* Approve Confirmation Modal */}
-      <ConfirmationModal
-        open={isApproveModalOpen}
-        onOpenChange={setIsApproveModalOpen}
-        title="Confirm Approval"
-        description={`Are you sure you want to approve the withdrawal of ₹${requestToApprove?.amount} for ${requestToApprove?.userName}?`}
-        onConfirm={handleConfirmApprove}
+      {/* Edit Request Modal */}
+      <EditRequestModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        request={requestToEdit}
+        onUpdateRequest={handleUpdateRequest}
       />
     </div>
   );

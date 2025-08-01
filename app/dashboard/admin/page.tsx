@@ -20,20 +20,20 @@ export default function Dashboard() {
 
     const mainStats = [
         {
-            name: "Total Leaders",
+            name: "Total Users",
             value: countLoading ? "..." : (count.users ?? 0).toLocaleString(),
             icon: Users,
             color: "bg-blue-100 text-blue-600",
         },
         {
-            name: "Total Leads",
+            name: "Total BM",
             value: countLoading ? "..." : (count.leads ?? 0).toLocaleString(),
             icon: FileText,
             color: "bg-green-100 text-green-600",
         },
         {
-            name: "Total Clients",
-            value: countLoading ? "..." : (count.clients ?? 0).toLocaleString(),
+            name: "Trust Account",
+            value:(totalIncome ?? 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' }),
             icon: UserCheck,
             color: "bg-purple-100 text-purple-600",
         },
@@ -47,25 +47,25 @@ export default function Dashboard() {
 
     const secondaryStats = [
         {
-            name: "Link Clicks",
+            name: "Divisions",
             value: countLoading ? "..." : (count.linkClicks ?? 0).toLocaleString(),
             icon: Link,
             color: "bg-pink-100 text-pink-600",
         },
         {
-            name: "App Links",
+            name: "Districts",
             value: countLoading ? "..." : (count.appLinks ?? 0).toLocaleString(),
             icon: Link,
             color: "bg-indigo-100 text-indigo-600",
         },
         {
-            name: "Contacts",
+            name: "States",
             value: countLoading ? "..." : (count.contacts ?? 0).toLocaleString(),
             icon: Contact,
             color: "bg-cyan-100 text-cyan-600",
         },
         {
-            name: "Join Links",
+            name: "Total Board Members",
             value: countLoading ? "..." : (count.joinLinks ?? 0).toLocaleString(),
             icon: Link,
             color: "bg-teal-100 text-teal-600",
@@ -89,7 +89,7 @@ export default function Dashboard() {
 
     const userDetailStats = [
         {
-            name: "Admin Users",
+            name: "Super Admin",
             value: countLoading ? "..." : (count.userStats?.admin ?? 0).toLocaleString(),
             icon: Users,
             color: "bg-amber-100 text-amber-600",
@@ -125,13 +125,13 @@ export default function Dashboard() {
 
     const clientStats = [
         {
-            name: "Approved Clients",
+            name: "Withdraw Requests",
             value: countLoading ? "..." : (count.clientStats?.approved ?? 0).toLocaleString(),
             icon: CheckCircle,
             color: "bg-green-100 text-green-600",
         },
         {
-            name: "Pending Clients",
+            name: "Extend Requests",
             value: countLoading ? "..." : (count.clientStats?.pending ?? 0).toLocaleString(),
             icon: Clock,
             color: "bg-yellow-100 text-yellow-600",
@@ -169,10 +169,8 @@ export default function Dashboard() {
         <div className="space-y-8 py-4">
             {renderStatsGroup("Main Statistics", mainStats)}
             {renderStatsGroup("Additional Statistics", secondaryStats)}
-            {renderStatsGroup("Detailed Statistics", additionalStats, 2)}
             {renderStatsGroup("User Statistics", userDetailStats, 2)}
-            {renderStatsGroup("Lead Statistics", leadStats, 3)}
-            {renderStatsGroup("Client Statistics", clientStats, 2)}
+            {renderStatsGroup("Requests Statistics", clientStats, 2)}
         </div>
     );
 }

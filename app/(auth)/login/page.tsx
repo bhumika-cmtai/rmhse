@@ -59,7 +59,7 @@ const LoginForm = () => {
         if (user.role === 'admin') {
           router.push('/dashboard/admin');
         } else {
-          router.push('/dashboard/team');
+          router.push('/dashboard/user');
         }
       } else {
         // If login fails but doesn't throw, still reset loading
