@@ -3,13 +3,15 @@ import Hero from './home/Hero';
 import AboutSection from './home/AboutUs';
 import Image from 'next/image';
 import WhyChooseUs from './home/WhyChooseUs';
+import OurProcess from './home/OurProcess';
 
 const Page = () => {
   return (
-    <div className="min-h-screen py-10">
+    <div className="min-h-screen py-10 ">
       <Hero />
+      <OurProcess />
       <AboutSection />
-      <div className='flex justify-center items-center'>
+      <div className='flex justify-center items-center py-20'>
         <Image 
         src="/posterImg.jpg"
         alt="RMHSE Goolak India"

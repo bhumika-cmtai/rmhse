@@ -1,51 +1,27 @@
 "use client";
 
-import React, { useState, Suspense, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Mail, Lock, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
-import Image from 'next/image';
-// import { useDispatch, useSelector } from 'react-redux';
-// import { AppDispatch } from '@/lib/store';
-// import { login, selectError, setError } from '@/lib/redux/authSlice';
+import { useRouter } from "next/navigation";
 
-const LoginForm = () => {
+// Combined the components into one for a clean, page-level implementation.
+const LoginPage = () => {
   const router = useRouter();
-  // const dispatch = useDispatch<AppDispatch>();
-
+  
+  // --- All your existing logic is preserved ---
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // const error = useSelector(selectError);
-
-  // useEffect(() => {
-  //   if (error) {
-  //     toast.error("Incorrect credentials. Try again.");
-  //     dispatch(setError(null));
-  //     setLoading(false);
-  //   }
-  // }, [error, dispatch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Mock user check
     const users = [
       { email: "admin@gmail.com", password: "admin123", role: "admin" },
       { email: "test@gmail.com", password: "test123", role: "user" },
@@ -55,135 +31,106 @@ const LoginForm = () => {
       (u) => u.email === email && u.password === password
     );
 
-    if (matchedUser) {
-      toast.success("Successfully logged in!");
-      setTimeout(() => {
-        if (matchedUser.role === "admin") {
-          router.push("/dashboard/admin");
-        } else {
-          router.push("/dashboard/user");
-        }
-      }, 1000);
-    } else {
-      toast.error("Invalid credentials");
-      setLoading(false);
-    }
+    // Using a timeout to simulate network delay
+    setTimeout(() => {
+      if (matchedUser) {
+        toast.success("Successfully logged in!");
+        setTimeout(() => {
+          if (matchedUser.role === "admin") {
+            router.push("/dashboard/admin");
+          } else {
+            router.push("/dashboard/user");
+          }
+        }, 1000);
+      } else {
+        toast.error("Invalid credentials");
+        setLoading(false);
+      }
+    }, 1000);
   };
 
   return (
-    <Card className="w-full max-w-sm bg-gradient-to-br from-[#F0FAF7]/80 to-[#EFF8FF]/80 backdrop-blur-md rounded-3xl p-8 shadow-2xl border-none">
-      <CardHeader className="text-center p-0 mb-6">
-        <CardTitle className="text-4xl font-bold text-gray-900">Sign In</CardTitle>
-        <CardDescription>Enter your credentials to access your account.</CardDescription>
-      </CardHeader>
+    <div className="flex items-center justify-center min-h-screen bg-yellow-100 px-4">
+      {/* --- UI has been completely updated to match the image --- */}
+      <div className="w-full max-w-sm p-8 sm:py-8 sm:px-8 space-y-8 bg-gradient-to-br from-yellow-200/40 to-green-200/75 rounded-[20px] shadow-lg">
+        
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-pink-500">Login</h1>
+        </div>
 
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4 p-0">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                className="pl-10"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                className="pl-10"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-          </div>
-          <div className="flex items-center space-x-2 pt-2">
-            <Checkbox
-              id="remember"
-              checked={rememberMe}
-              onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+        {/* Form */}
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          
+          {/* Email Input */}
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="example@email.com"
+              className="w-full pl-10 pr-4 py-5 bg-white border-[1px] border-black rounded-[12px] focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
+              style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
               disabled={loading}
             />
-            <label
-              htmlFor="remember"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Remember me
-            </label>
           </div>
-        </CardContent>
-        <CardFooter className="p-0 pt-6">
-          <Button className="w-full" type="submit" disabled={loading}>
+
+          {/* Password Input */}
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="**********"
+              className="w-full pl-10 pr-16 py-5 bg-white border-[1px] border-black rounded-[12px] focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
+              style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 hover:text-gray-700"
+              disabled={loading}
+            >
+              {showPassword ? "HIDE" : "SHOW"}
+            </button>
+          </div>
+          
+          {/* Login Button */}
+          <Button
+            type="submit"
+            className="w-full py-5 font-semibold text-gray-800 bg-[#FDECB4] rounded-[10px] cursor-pointer  hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition duration-300"
+            style={{ boxShadow: '0 6px 4px 0 rgba(0, 0, 0, 0.25)' }}
+            disabled={loading}
+          >
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing In...
+                Logging in...
               </>
             ) : (
-              "Sign In"
+              "Login"
             )}
           </Button>
-        </CardFooter>
-      </form>
-    </Card>
-  );
-};
+        </form>
 
-const LoginPage = () => {
-  return (
-    <section
-      className="w-full min-h-screen relative flex items-center justify-center px-4 py-8 bg-[#F8FAFF] overflow-hidden"
-      id="login"
-    >
-      <div className="w-full max-w-6xl flex flex-col md:flex-row items-center md:items-end justify-center gap-8 lg:gap-16 relative z-10">
-
-        {/* Left Side: Illustration */}
-        <div className="flex justify-center">
-          <Image
-            src="/loginImg.png"
-            width={300}
-            height={300}
-            alt="Login Illustration"
-            className="hidden md:block md:w-[300px] object-contain"
-          />
+        {/* Sign Up Link */}
+        <div className="text-center">
+          <p className="text-sm text-gray-800">
+            Don't have an account?{" "}
+            <Link href="/signup" className="font-bold text-pink-500 hover:underline">
+              Sign Up
+            </Link>
+          </p>
         </div>
-
-        {/* Right Side: Form */}
-        <Suspense fallback={<div className="w-full max-w-md h-[650px] bg-white/50 rounded-3xl animate-pulse"></div>}>
-          <LoginForm />
-        </Suspense>
       </div>
-
-      {/* Background Blobs */}
-      <motion.div
-        initial={{ scale: 0, opacity: 0 }}
-        whileInView={{ scale: 1, opacity: 0.2 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1.5, ease: "easeInOut" }}
-        className="absolute block -right-[100px] top-[60px] lg:-top-[40px] lg:-right-[100px] h-[200px] w-[200px] lg:h-[300px] lg:w-[300px] bg-gradient-to-b from-purple-400 to-pink-200 rounded-full opacity-20"
-      ></motion.div>
-      <motion.div
-        initial={{ scale: 0, opacity: 0 }}
-        whileInView={{ scale: 1, opacity: 0.2 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1, ease: "easeInOut" }}
-        className="absolute block top-[260px] -left-[150px] lg:top-[240px] lg:-left-[300px] lg:h-[600px] h-[200px] w-[200px] lg:w-[600px] bg-gradient-to-b from-purple-400 to-pink-200 rounded-full opacity-20"
-      ></motion.div>
-    </section>
+    </div>
   );
 };
 

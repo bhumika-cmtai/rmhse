@@ -28,13 +28,13 @@ const Header = () => {
 
   const navLinksLaptop = [
     { href: "home", label: "Home" },
-    { href: "aboutus", label: "About" },
-    { href: "contactus", label: "Contact" },
+    { href: "about", label: "About" },
+    { href: "contact", label: "Contact" },
   ];
   const navLinksMobile = [
     { href: "#home", label: "Home" },
-    { href: "#aboutus", label: "About" },
-    { href: "#contactus", label: "Contact" },
+    { href: "#about", label: "About" },
+    { href: "#contact", label: "Contact" },
   ];
 
   return (
@@ -60,7 +60,7 @@ const Header = () => {
                   onClick={() => {
                     document.getElementById(`${link.href}`)?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="text-black hover:text-purple-600 transition-colors hover:cursor-pointer"
+                  className="text-black hover:text-pink-500 transition-colors hover:cursor-pointer"
                 >
                   {link.label}
                 </button>
