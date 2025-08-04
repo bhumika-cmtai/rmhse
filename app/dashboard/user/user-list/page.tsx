@@ -58,12 +58,12 @@ export default function Users() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const [isExtendModalOpen, setIsExtendModalOpen] = useState(true);
+  const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [extendRequested, setExtendRequested] = useState(false);
   const [extendLoading, setExtendLoading] = useState(false);
 
   const ITEMS_PER_PAGE = 10;
-  const USER_LIMIT = 25;
+  const USER_LIMIT = 10;
 
   // Debounce search input to avoid re-fetching on every keystroke
   useEffect(() => {
