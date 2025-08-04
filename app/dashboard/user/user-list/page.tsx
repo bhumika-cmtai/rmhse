@@ -10,6 +10,14 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +58,12 @@ export default function Users() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const [isExtendModalOpen, setIsExtendModalOpen] = useState(true);
+  const [extendRequested, setExtendRequested] = useState(false);
+  const [extendLoading, setExtendLoading] = useState(false);
+
   const ITEMS_PER_PAGE = 10;
+  const USER_LIMIT = 25;
 
   // Debounce search input to avoid re-fetching on every keystroke
   useEffect(() => {
@@ -133,7 +146,17 @@ export default function Users() {
   return (
     <div className="w-full mx-auto mt-2">
       <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
-        <h1 className="text-4xl font-bold shrink-0">User List</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-4xl font-bold shrink-0">User List</h1>
+          <Button
+            variant="outline"
+            onClick={() => setIsExtendModalOpen(true)}
+            disabled={allUsers.length < USER_LIMIT || extendRequested}
+            className="mt-2"
+          >
+            {extendRequested ? 'Extension Requested' : 'Extend Limit'}
+          </Button>
+        </div>
         <div className="flex flex-wrap justify-end gap-2 w-full">
           <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="flex-grow sm:flex-grow-0 sm:w-48"/>
           <Select value={roleFilter} onValueChange={handleRoleChange}>
@@ -242,6 +265,47 @@ export default function Users() {
         isDeleting={deleteLoading} 
         confirmButtonText="Delete User" 
       />
+
+      <Dialog open={isExtendModalOpen} onOpenChange={setIsExtendModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Extend User Limit</DialogTitle>
+            <DialogDescription>
+              Your current user limit is {USER_LIMIT} users.
+              Would you like to request an extension to this limit?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsExtendModalOpen(false)}
+              disabled={extendLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setExtendLoading(true);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                setExtendRequested(true);
+                setIsExtendModalOpen(false);
+                setExtendLoading(false);
+                toast.success('Request sent for extension. Waiting for admin approval.');
+              }}
+              disabled={extendLoading}
+            >
+              {extendLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
+                  Sending Request...
+                </>
+              ) : (
+                'Request Extension'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
