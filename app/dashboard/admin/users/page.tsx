@@ -163,6 +163,14 @@ export default function Users() {
   const handleFormSelectChange = (fieldName: string, value: string) => {
     setForm(prevForm => ({ ...prevForm, [fieldName]: value as any }));
   };
+
+  // --- NEW FUNCTION TO MATCH DIVISION.TSX ---
+  const handleStatusToggle = () => {
+    setForm(prevForm => ({
+        ...prevForm,
+        status: prevForm.status === 'Active' ? 'Block' : 'Active'
+    }));
+  };
   
   const handleFormSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -232,7 +240,7 @@ export default function Users() {
         <CardContent className="p-0">
           <div className="overflow-x-auto"><Table>
             <TableHeader><TableRow>
-                <TableHead className="w-16">S. No.</TableHead><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone No.</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Income</TableHead><TableHead>Actions</TableHead>
+                <TableHead className="w-16">S. No.</TableHead><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone No.</TableHead><TableHead>Role ID</TableHead><TableHead>Status</TableHead><TableHead>Income</TableHead><TableHead>Actions</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {loading ? ( <TableRow><TableCell colSpan={8} className="text-center py-8"><div className="flex justify-center items-center gap-2"><Loader2 className="h-6 w-6 animate-spin" /><span>Loading users...</span></div></TableCell></TableRow>
@@ -284,7 +292,7 @@ export default function Users() {
         </Pagination></div>
       )}
 
-      {/* Add/Edit Dialog */}
+      {/* --- ADD/EDIT DIALOG --- */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[800px]">
           <DialogHeader><DialogTitle>{editUser ? 'Edit User' : 'Add New User'}</DialogTitle><DialogDescription>{editUser ? 'Update the details for this user.' : 'Fill in the details to create a new user.'}</DialogDescription></DialogHeader>
@@ -300,25 +308,46 @@ export default function Users() {
                 <div className="space-y-2"><Label htmlFor="role_id">Primary Role ID*</Label><Input id="role_id" name="role_id" placeholder="e.g., DIV001" value={form.role_id[0] || ''} onChange={(e) => setForm(f => ({...f, role_id: [e.target.value]}))} required /></div>
                 <div className="space-y-2"><Label htmlFor="income">Income</Label><Input id="income" name="income" type="number" value={form.income || ''} onChange={handleFormChange}/></div>
                 
-                {/* --- THIS IS THE FIX --- */}
-                {/* Always show a dropdown for status in both Add and Edit modes */}
-                <div className="space-y-2">
+                {/* --- START OF MODIFIED STATUS FIELD --- */}
+                {/* Conditionally render status field based on edit mode */}
+                {editUser ? (
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <div><Badge variant={form.status === 'Block' ? 'destructive' : 'default'}>{form.status}</Badge></div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
                     <Select value={form.status} onValueChange={(value) => handleFormSelectChange('status', value)}>
-                        <SelectTrigger><SelectValue/></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Active">Active</SelectItem>
-                            <SelectItem value="Block">Block</SelectItem>
-                        </SelectContent>
+                      <SelectTrigger><SelectValue/></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Block">Block</SelectItem>
+                      </SelectContent>
                     </Select>
-                </div>
-                {/* --- END OF FIX --- */}
+                  </div>
+                )}
+                {/* --- END OF MODIFIED STATUS FIELD --- */}
 
                 <div className="space-y-2 md:col-span-2"><Label htmlFor="referred_by">Referred By</Label><Input id="referred_by" name="referred_by" placeholder="Referrer's Role ID" value={form.referred_by} onChange={handleFormChange}/></div>
                 <div className="space-y-2"><Label htmlFor="current_add">Current Address</Label><Textarea id="current_add" name="current_add" value={form.current_add} onChange={handleFormChange}/></div>
                 <div className="space-y-2"><Label htmlFor="permanent_add">Permanent Address</Label><Textarea id="permanent_add" name="permanent_add" value={form.permanent_add} onChange={handleFormChange}/></div>
             </div>
+
+            {/* --- MODIFIED DIALOG FOOTER --- */}
             <DialogFooter className="pt-4">
+              {/* Add the status toggle button only in edit mode */}
+              {editUser && (
+                <Button 
+                  type="button" 
+                  variant={form.status === 'Active' ? 'destructive' : 'secondary'} 
+                  onClick={handleStatusToggle} 
+                  disabled={formLoading} 
+                  className="mr-auto"
+                >
+                  {form.status === 'Active' ? 'Block User' : 'Activate User'}
+                </Button>
+              )}
               <DialogClose asChild><Button type="button" variant="outline" disabled={formLoading}>Cancel</Button></DialogClose>
               <Button type="submit" disabled={formLoading}>{formLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}{formLoading ? 'Saving...' : (editUser ? 'Update User' : 'Add User')}</Button>
             </DialogFooter>
