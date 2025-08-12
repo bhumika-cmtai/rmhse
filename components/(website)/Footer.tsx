@@ -30,7 +30,7 @@ const Footer: React.FC = () => {
           <div className="flex space-x-4 mt-2">
             
             <a
-              href=""
+              href="https://youtu.be/iIwTglCQn0I?si=aVUqGfBS5v8H9hV_"
               aria-label="YouTube"
               className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform hover:scale-110"
             >
@@ -39,11 +39,11 @@ const Footer: React.FC = () => {
                 width={200}
                 height={200}
                 alt="youtube"
-                className="w-[32px] h-auto"
+                className="w-[28px] h-auto"
               />
             </a>
             <a
-              href=""
+              href="https://www.facebook.com/share/1RKRhQEhBZ/"
               aria-label="Facebook"
               className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform hover:scale-110"
             >
@@ -52,11 +52,11 @@ const Footer: React.FC = () => {
                 width={200}
                 height={200}
                 alt="facebook"
-                className="w-[32px] h-auto"
+                className="w-[28px] h-auto"
               />
             </a>
             <a
-              href=""
+              href="https://wa.me/917210050984"
               aria-label="WhatsApp"
               className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform hover:scale-110"
             >
@@ -65,7 +65,46 @@ const Footer: React.FC = () => {
                 width={200}
                 height={200}
                 alt="whatsApp"
-                className="w-[32px] h-auto"
+                className="w-[28px] h-auto"
+              />
+            </a>
+            <a
+              href="https://www.instagram.com/p/DNFnpnyTbrG/?igsh=MWQ2dDhpZXprcjN3Mg=="
+              aria-label="Instagram"
+              className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform hover:scale-110"
+            >
+              <Image 
+                src="/instagram.svg"
+                width={200}
+                height={200}
+                alt="instagram"
+                className="w-[44px] h-auto"
+              />
+            </a>
+            <a
+              href="https://g.co/kgs/aoJUcVN"
+              aria-label="Location"
+              className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform hover:scale-110"
+            >
+              <Image 
+                src="/location.svg"
+                width={200}
+                height={200}
+                alt="location"
+                className="w-[34px] h-auto"
+              />
+            </a>
+            <a
+              href="https://x.com/rmhsetrust?t=mf2cFMLwySVEJqzWLKaDJQ&s=09"
+              aria-label="Twitter"
+              className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform hover:scale-110"
+            >
+              <Image 
+                src="/twitter.svg"
+                width={200}
+                height={200}
+                alt="location"
+                className="w-[24px] h-auto"
               />
             </a>
           </div>
@@ -82,7 +121,7 @@ const Footer: React.FC = () => {
       © 2025 RMHSE Trust. All Rights Reserved
     </p>
     <Link
-      href="https://earn4files.yolasite.com/resources/1.png"
+      href="/privacy-policy"
       className="text-black transition-colors font-medium mx-10"
     >
       Privacy Policy
