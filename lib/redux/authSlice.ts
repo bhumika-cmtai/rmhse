@@ -109,6 +109,8 @@ export const login = ({ email, password, rememberMe }: { email: string; password
   dispatch(setError(null));
   try {
     // console.log("Making login API call to:", `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`);
+    console.log("----this is auth login----")
+    console.log(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login}`)
     const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`, { email, password });
     // console.log("Login API response:", response.data);
     // console.log(response)
