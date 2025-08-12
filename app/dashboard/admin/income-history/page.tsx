@@ -106,7 +106,7 @@ export default function Users() {
             <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Filter by Role" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="user">User</SelectItem>
+              <SelectItem value="MEM">MEMBER</SelectItem>
               <SelectItem value="DIV">DIV</SelectItem>
               <SelectItem value="DIST">DIST</SelectItem>
               <SelectItem value="STAT">STAT</SelectItem>

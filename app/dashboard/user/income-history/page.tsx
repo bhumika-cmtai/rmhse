@@ -14,10 +14,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, PiggyBank } from "lucide-react";
 import { toast } from "sonner";
-import { useSelector } from "react-redux";
-import { RootState } from "@/lib/store"; // Adjust path if needed
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/lib/store"; // Adjust path if needed
 import axios from "axios";
 import Cookies from "js-cookie";
+import { fetchCurrentUser } from '@/lib/redux/authSlice';
 
 // MODIFICATION: Update the type to include the new roleId field
 type CommissionEntry = {
@@ -27,16 +28,27 @@ type CommissionEntry = {
 };
 
 export default function IncomeHistoryPage() {
-  const { user: loggedInUser } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch<AppDispatch>(); // Setup dispatch
+  const { user: loggedInUser, isLoading: isAuthLoading } = useSelector((state: RootState) => state.auth);
 
   const [history, setHistory] = useState<CommissionEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // This will now track the history loading
   const [totalCommission, setTotalCommission] = useState(0);
 
+  // --- NEW useEffect to ensure loggedInUser is available ---
   useEffect(() => {
+    // If there's no user in the state, dispatch the action to fetch them.
+    if (!loggedInUser) {
+      dispatch(fetchCurrentUser());
+    }
+  }, [loggedInUser, dispatch]);
+
+  // --- Existing useEffect to fetch history, which now runs AFTER the user is fetched ---
+  useEffect(() => {
+    // Only proceed if we have a valid user ID.
     if (loggedInUser?._id) {
       const fetchIncomeHistory = async () => {
-        setIsLoading(true);
+        setIsLoading(true); // Start loading history
         try {
           const token = Cookies.get('auth-token');
           if (!token) throw new Error("Authentication token not found.");
@@ -45,10 +57,11 @@ export default function IncomeHistoryPage() {
             `${process.env.NEXT_PUBLIC_API_BASE_URL}/users/commission-history`,
             { headers: { 'Authorization': `Bearer ${token}` } }
           );
-          console.log(response)
-          if (response.data ) {
+          
+          if (response.data && response.data.data) {
             const fetchedHistory: CommissionEntry[] = response.data.data;
             setHistory(fetchedHistory);
+            // Calculate total commission from the fetched data
             setTotalCommission(fetchedHistory.reduce((sum, item) => sum + item.amount, 0));
           } else {
             throw new Error(response.data.message || "Failed to fetch income history.");
@@ -56,18 +69,47 @@ export default function IncomeHistoryPage() {
         } catch (error: any) {
           toast.error(error.response?.data?.message || error.message);
         } finally {
-          setIsLoading(false);
+          setIsLoading(false); // Stop loading history
         }
       };
       fetchIncomeHistory();
-    } else {
-      setIsLoading(false);
     }
-  }, [loggedInUser]);
+  }, [loggedInUser]); // This effect is dependent on loggedInUser
 
+  // Unified loading state: show loader if we are fetching the user OR the history
+  if (isAuthLoading || (isLoading && history.length === 0)) {
+    return <div className="flex justify-center items-center h-80"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+
+  // Handle case where user could not be fetched after loading
+  if (!loggedInUser) {
+      return (
+        <div className="flex flex-col items-center justify-center h-80 text-center text-red-600 bg-red-50 rounded-lg p-8">
+            <AlertTriangle className="h-10 w-10 mb-4" />
+            <h2 className="text-xl font-semibold">Could Not Load Data</h2>
+            <p>We were unable to retrieve your user information. Please try refreshing the page or logging in again.</p>
+        </div>
+      );
+  }
+  // Unified loading state: show loader if we are fetching the user OR the history
+  if (isAuthLoading || (isLoading && history.length === 0)) {
+    return <div className="flex justify-center items-center h-80"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+
+  // Handle case where user could not be fetched after loading
+  if (!loggedInUser) {
+      return (
+        <div className="flex flex-col items-center justify-center h-80 text-center text-red-600 bg-red-50 rounded-lg p-8">
+            <AlertTriangle className="h-10 w-10 mb-4" />
+            <h2 className="text-xl font-semibold">Could Not Load Data</h2>
+            <p>We were unable to retrieve your user information. Please try refreshing the page or logging in again.</p>
+        </div>
+      );
+  }
   if (isLoading) {
     return <div className="flex justify-center items-center h-80"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
+
 
  
 
