@@ -3,11 +3,14 @@
 import { MoveRight, Menu, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,15 +29,29 @@ const Header = () => {
     };
   }, [isMenuOpen]);
 
-  const navLinksLaptop = [
-    { href: "home", label: "Home" },
-    { href: "about", label: "About" },
-    { href: "contact", label: "Contact" },
-  ];
-  const navLinksMobile = [
-    { href: "#home", label: "Home" },
-    { href: "#about", label: "About" },
-    { href: "#contact", label: "Contact" },
+  // Check if we're on the home page
+  const isHomePage = pathname === '/';
+
+  // Handle navigation with scrolling
+  const handleNavigation = (sectionId: string) => {
+    setIsMenuOpen(false);
+    
+    if (isHomePage) {
+      // If we're already on the home page, just scroll to the section
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      // If we're on another page, navigate to home page with the hash
+      router.push(`/#${sectionId}`);
+    }
+  };
+
+  const navLinks = [
+    { id: "home", label: "Home" },
+    { id: "about", label: "About" },
+    { id: "contact", label: "Contact" },
   ];
 
   return (
@@ -54,13 +71,11 @@ const Header = () => {
 
         <div className="hidden lg:flex items-center gap-6 ml-auto">
           <ul className='flex gap-[76px] text-black font-normal text-[20px]'>
-            {navLinksLaptop.map((link) => (
+            {navLinks.map((link) => (
               <li key={link.label}>
                 <button
-                  onClick={() => {
-                    document.getElementById(`${link.href}`)?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="text-black hover:text-pink-500 transition-colors hover:cursor-pointer"
+                  onClick={() => handleNavigation(link.id)}
+                  className="text-black hover:text-green-600 transition-colors hover:cursor-pointer"
                 >
                   {link.label}
                 </button>
@@ -94,10 +109,12 @@ const Header = () => {
         `}
       >
         <ul className='flex flex-col items-center gap-6 p-8 text-[20px]'>
-          {navLinksMobile.map((link) => (
-            <Link key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)}>
-              <li className='cursor-pointer hover:text-purple-600 transition-colors'>{link.label}</li>
-            </Link>
+          {navLinks.map((link) => (
+            <li key={link.id} className='cursor-pointer hover:text-green-600 transition-colors'>
+              <button onClick={() => handleNavigation(link.id)}>
+                {link.label}
+              </button>
+            </li>
           ))}
         </ul>
         <div className="p-4 border-t border-gray-200 flex justify-center">

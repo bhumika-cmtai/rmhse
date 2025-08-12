@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 const ListMarker = () => (
   <svg
-    className="h-6 w-6 flex-none text-purple-600"
+    className="h-6 w-6 flex-none text-green-600"
     viewBox="0 0 24 24"
     fill="currentColor"
     aria-hidden="true"
@@ -27,9 +27,9 @@ const TermsAndConditionsPage = () => {
         />
       </Head>
 
-      <div className="bg-white px-6 py-24 sm:py-32 lg:px-8">
+      <div className="bg-white px-6 py-24 sm:py-32 lg:px-8 mt-16">
         <div className="mx-auto max-w-3xl text-base leading-7 text-gray-700">
-          <p className="text-base font-semibold leading-7 text-purple-600">
+          <p className="text-base font-semibold leading-7 text-green-600">
             Rules of Engagement
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
@@ -160,8 +160,8 @@ const TermsAndConditionsPage = () => {
                 For any questions about these Terms and Conditions, please contact us.
               </p>
               <div className="mt-6">
-                <p><strong>Email:</strong> <a href="mailto:officialgrowup01@gmail.com" className="text-purple-600 hover:text-purple-700 hover:underline">officialgrowup01@gmail.com</a></p>
-                <p><strong>Website:</strong> <Link href="https://rmhse-fe.vercel.app/" className="text-purple-600 hover:text-purple-700 hover:underline">RMHSE</Link></p>
+                <p><strong>Email:</strong> <a href="mailto:officialgrowup01@gmail.com" className="text-green-600 hover:text-green-700 hover:underline">officialgrowup01@gmail.com</a></p>
+                <p><strong>Website:</strong> <Link href="https://rmhse-fe.vercel.app/" className="text-green-600 hover:text-green-700 hover:underline">RMHSE</Link></p>
               </div>
             </section>
 

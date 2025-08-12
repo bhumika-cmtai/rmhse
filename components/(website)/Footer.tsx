@@ -120,12 +120,21 @@ const Footer: React.FC = () => {
     <p className=" text-black mb-2 sm:mb-0 font-medium mx-10">
       © 2025 RMHSE Trust. All Rights Reserved
     </p>
-    <Link
-      href="/privacy-policy"
-      className="text-black transition-colors font-medium mx-10"
-    >
-      Privacy Policy
-    </Link>
+    <div className="flex items-center mx-10">
+      <Link
+        href="/privacy-policy"
+        className="text-black transition-colors font-medium"
+      >
+        Privacy Policy
+      </Link>
+      <span className="mx-2 text-black font-medium">|</span>
+      <Link
+        href="/terms"
+        className="text-black transition-colors font-medium"
+      >
+        Terms & Conditions
+      </Link>
+    </div>
   </div>
 </div>
       </div>
