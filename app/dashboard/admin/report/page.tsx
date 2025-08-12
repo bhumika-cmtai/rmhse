@@ -2,188 +2,274 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download } from "lucide-react";
+import { Download, Loader2, ChevronDown } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-// import "jspdf-autotable";
-
-// Extend the jsPDF type to include the autoTable method from the plugin
-interface jsPDFWithAutoTable extends jsPDF {
-  autoTable: (options: any) => jsPDF;
-}
-
-// 1. User Interface as requested
-export interface User {
-  _id: string;
-  name: string;
-  email: string;
-  phoneNumber: string;
-  gender: 'Male' | 'Female' | 'Other';
-  role: 'div' | 'dist' | 'stat' | 'bm' | 'superadmin';
-  role_id: string[];
-  income: number;
-  status: 'Active' | 'Block';
-  createdOn: string; // ISO 8601 format string (e.g., "2023-10-26T10:00:00.000Z")
-  permanent_add: string;
-  current_add: string;
-  dob: string; 
-  emergency_num: string;
-  referred_by: string;
-}
-
-// 2. Sample User Data with different creation dates
-const sampleUsers: User[] = [
-  { _id: "1", name: "Amit Kumar", email: "amit.k@example.com", phoneNumber: "9876543210", gender: "Male", role: "div", role_id: ["DIV010", "DIST011"], income: 50000, status: "Active", createdOn: "2024-07-15T10:00:00.000Z", permanent_add: "...", current_add: "...", dob: "...", emergency_num: "...", referred_by: "..." },
-  { _id: "2", name: "Priya Sharma", email: "priya.s@example.com", phoneNumber: "8765432109", gender: "Female", role: "dist", role_id: ["DIST001"], income: 60000, status: "Active", createdOn: "2024-07-22T11:30:00.000Z", permanent_add: "...", current_add: "...", dob: "...", emergency_num: "...", referred_by: "..." },
-  { _id: "3", name: "Rajesh Singh", email: "rajesh.s@example.com", phoneNumber: "7654321098", gender: "Male", role: "bm", role_id: ["BM005", "DIST004", "STAT003"], income: 75000, status: "Active", createdOn: "2024-06-05T09:00:00.000Z", permanent_add: "...", current_add: "...", dob: "...", emergency_num: "...", referred_by: "..." },
-  { _id: "4", name: "Sunita Devi", email: "sunita.d@example.com", phoneNumber: "6543210987", gender: "Female", role: "stat", role_id: ["ST001"], income: 80000, status: "Block", createdOn: "2024-06-20T14:00:00.000Z", permanent_add: "...", current_add: "...", dob: "...", emergency_num: "...", referred_by: "..." },
-  { _id: "5", name: "Vikram Rathore", email: "vikram.r@example.com", phoneNumber: "5432109876", gender: "Male", role: "superadmin", role_id: ["SA009"], income: 150000, status: "Active", createdOn: "2023-12-10T18:00:00.000Z", permanent_add: "...", current_add: "...", dob: "...", emergency_num: "...", referred_by: "..." },
-  { _id: "6", name: "Anjali Verma", email: "anjali.v@example.com", phoneNumber: "9876512345", gender: "Female", role: "div", role_id: ["DIV008"], income: 52000, status: "Active", createdOn: "2023-12-25T12:00:00.000Z", permanent_add: "...", current_add: "...", dob: "...", emergency_num: "...", referred_by: "..." },
-];
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/lib/store";
+import { fetchUsers, selectUsers, selectLoading, selectError, User } from "@/lib/redux/userSlice";
+import axios from "axios";
+import Cookies from "js-cookie";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 const months = [
-    { value: 1, label: "January" }, { value: 2, label: "February" }, { value: 3, label: "March" },
-    { value: 4, label: "April" }, { value: 5, label: "May" }, { value: 6, label: "June" },
-    { value: 7, label: "July" }, { value: 8, label: "August" }, { value: 9, label: "September" },
-    { value: 10, label: "October" }, { value: 11, label: "November" }, { value: 12, label: "December" }
+  { value: 1, label: "January" }, { value: 2, label: "February" }, { value: 3, label: "March" },
+  { value: 4, label: "April" }, { value: 5, label: "May" }, { value: 6, label: "June" },
+  { value: 7, label: "July" }, { value: 8, label: "August" }, { value: 9, label: "September" },
+  { value: 10, label: "October" }, { value: 11, label: "November" }, { value: 12, label: "December" }
 ];
 
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
+type DownlineUser = {
+  _id: string;
+  name: string;
+  phoneNumber: string;
+  status: string;
+  latestRoleId: string;
+  income: number;
+};
+
 export default function ReportPage() {
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const dispatch = useDispatch<AppDispatch>();
+  const users = useSelector(selectUsers);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
 
-  // 3. Filter logic based on selected month and year
-  useEffect(() => {
-    const filterUsers = () => {
-      const users = sampleUsers.filter(user => {
-        const createdOnDate = new Date(user.createdOn);
-        return createdOnDate.getFullYear() === selectedYear && (createdOnDate.getMonth() + 1) === selectedMonth;
-      });
-      setFilteredUsers(users);
-    };
-
-    filterUsers();
-  }, [selectedYear, selectedMonth]);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [referralData, setReferralData] = useState<DownlineUser[]>([]);
+  const [referralLoading, setReferralLoading] = useState(false);
   
-  // 4. PDF Download Handler
-  const handleDownloadPDF = () => {
-    // No need to cast to a custom interface anymore
-    const doc = new jsPDF();
-    
-    doc.text(`User Report - ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`, 14, 15);
+  // --- NEW STATE FOR PDF DOWNLOAD ---
+  const [isDownloading, setIsDownloading] = useState(false);
 
-    const tableColumn = ["S.no.", "Name", "Email", "Phone Number", "Gender", "Role", "Role ID", "Income"];
-    const tableRows: (string | number)[][] = [];
+  useEffect(() => {
+    dispatch(fetchUsers({ month: selectedMonth, year: selectedYear, limit: 1000 }));
+  }, [dispatch, selectedYear, selectedMonth]);
+  
+  const handleToggleReferrals = async (userId: string) => {
+    if (expandedUserId === userId) {
+      setExpandedUserId(null);
+      return;
+    }
+    setExpandedUserId(userId);
+    setReferralLoading(true);
+    setReferralData([]);
+    try {
+      const token = Cookies.get('auth-token');
+      if (!token) throw new Error("Authentication session has expired.");
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/downline/${userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setReferralData(response.data?.data || []);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || error.message);
+    } finally {
+      setReferralLoading(false);
+    }
+  };
 
-    filteredUsers.forEach((user, index) => {
-      const latestRoleId = user.role_id.length > 0 ? user.role_id[user.role_id.length - 1] : 'N/A';
-      const userRow = [
-        index + 1,
-        user.name,
-        user.email,
-        user.phoneNumber,
-        user.gender,
-        user.role.toUpperCase(),
-        latestRoleId,
-        `₹${user.income.toLocaleString()}`
-      ];
-      tableRows.push(userRow);
-    });
+  // --- NEW ADVANCED PDF DOWNLOAD HANDLER ---
+  const handleDownloadDetailedPDF = async () => {
+    setIsDownloading(true);
+    toast.info("Preparing detailed report... This might take a moment.", { duration: 10000 });
 
-    // 3. Call autoTable as a function, passing the doc instance as the first argument
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 20,
-    });
+    try {
+      const token = Cookies.get('auth-token');
+      if (!token) throw new Error("Authentication required.");
 
-    doc.save(`user_report_${selectedYear}_${selectedMonth}.pdf`);
+      // Step 1: Fetch all referral data in parallel
+      const referralPromises = users.map(user =>
+        axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/downline/${user._id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => ({ userId: user._id, referrals: res.data?.data || [] }))
+          .catch(() => ({ userId: user._id, referrals: [] })) // Handle failed requests gracefully
+      );
+      
+      const allReferralsData = await Promise.all(referralPromises);
+      const referralsMap = new Map(allReferralsData.map(item => [item.userId, item.referrals]));
+
+      // Step 2: Generate the PDF
+      const doc = new jsPDF();
+      doc.text(`Detailed User Report - ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`, 14, 15);
+      
+      let currentY = 20; // Track the Y position on the page
+
+      users.forEach((user, index) => {
+        // Add a page break if there isn't enough space for the next entry
+        if (currentY > 250) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        // Main user table
+        const mainTableColumn = ["S.no.", "Name", "Phone", "Role", "Latest Role ID", "Income"];
+        const latestRoleId = user.roleId && user.roleId.length > 0 ? user.roleId[user.roleId.length - 1] : 'N/A';
+        const userRow = [[
+          index + 1,
+          user.name ?? 'N/A',
+          user.phoneNumber ?? 'N/A',
+          user.role?.toUpperCase() ?? 'N/A',
+          latestRoleId,
+          `₹${user.income?.toLocaleString() ?? '0'}`
+        ]];
+        
+        autoTable(doc, {
+          head: [mainTableColumn],
+          body: userRow,
+          startY: currentY,
+          theme: 'striped'
+        });
+
+        currentY = (doc as any).lastAutoTable.finalY; // Update Y position
+
+        // Sub-table for referrals
+        const userReferrals = referralsMap.get(user._id);
+        if (userReferrals && userReferrals.length > 0) {
+          const subTableColumn = ["Referred User", "Phone", "Status", "Role ID", "Income"];
+          const subTableRows = userReferrals.map((ref: DownlineUser) => [
+            ref.name,
+            ref.phoneNumber,
+            ref.status,
+            ref.latestRoleId,
+            `₹${ref.income?.toLocaleString() ?? '0'}`
+          ]);
+
+          autoTable(doc, {
+            head: [subTableColumn],
+            body: subTableRows,
+            startY: currentY + 2,
+            margin: { left: 14 },
+            theme: 'grid',
+            headStyles: { fillColor: [241, 245, 249] , textColor: [0, 0, 0]}
+          });
+
+          currentY = (doc as any).lastAutoTable.finalY; // Update Y position again
+        } else {
+            doc.text("No users referred.", 14, currentY + 7);
+            currentY += 10;
+        }
+        
+        currentY += 5; // Add spacing between user blocks
+      });
+
+      doc.save(`detailed_user_report_${selectedYear}_${selectedMonth}.pdf`);
+      toast.success("Report downloaded successfully!");
+
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate detailed report.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
-    <div className="w-full mx-auto mt-2">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-        <h1 className="text-3xl font-bold">User Reports</h1>
-        <div className="flex gap-2">
-          {/* Year Selector */}
+        <h1 className="text-3xl font-bold tracking-tight">User Reports</h1>
+        <div className="flex items-center gap-2">
           <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Select Year" />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map(year => (
-                <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-              ))}
-            </SelectContent>
+            <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+            <SelectContent>{years.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}</SelectContent>
           </Select>
-          
-          {/* Month Selector */}
           <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Select Month" />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map(month => (
-                <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>
-              ))}
-            </SelectContent>
+            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectContent>{months.map(month => <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>)}</SelectContent>
           </Select>
-          
-          {/* Download Button */}
-          <Button onClick={handleDownloadPDF} disabled={filteredUsers.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
+          <Button onClick={handleDownloadDetailedPDF} disabled={users.length === 0 || loading || isDownloading}>
+            {isDownloading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            {isDownloading ? "Preparing..." : "Download"}
           </Button>
         </div>
       </div>
 
-      {/* 5. Preview Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-2 sm:p-4">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-20">S.no.</TableHead>
+                  <TableHead className="w-16">S.no.</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone Number</TableHead>
-                  <TableHead>Gender</TableHead>
+                  <TableHead>Phone</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Role ID (Latest)</TableHead>
+                  <TableHead>Latest Role ID</TableHead>
                   <TableHead>Income</TableHead>
+                  <TableHead className="text-center">View Referrals</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.length > 0 ? (
-                  filteredUsers.map((user, idx) => {
-                    const latestRoleId = user.role_id.length > 0 ? user.role_id[user.role_id.length - 1] : 'N/A';
-                    return (
-                      <TableRow key={user._id}>
+                {loading ? (
+                  <TableRow><TableCell colSpan={7} className="h-20 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                ) : error ? (
+                  <TableRow><TableCell colSpan={7} className="h-20 text-center text-red-500">{error}</TableCell></TableRow>
+                ) : users.length > 0 ? (
+                  users.map((user, idx) => (
+                    <React.Fragment key={user._id}>
+                      <TableRow>
                         <TableCell>{idx + 1}</TableCell>
                         <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.phoneNumber}</TableCell>
-                        <TableCell>{user.gender}</TableCell>
-                        <TableCell>{user.role.toUpperCase()}</TableCell>
-                        <TableCell>{latestRoleId}</TableCell>
-                        <TableCell>₹{user.income.toLocaleString()}</TableCell>
+                        <TableCell>{user.phoneNumber ?? 'N/A'}</TableCell>
+                        <TableCell>{user.role ? user.role.toUpperCase() : 'N/A'}</TableCell>
+                        <TableCell>{user.roleId && user.roleId.length > 0 ? user.roleId[user.roleId.length - 1] : 'N/A'}</TableCell>
+                        <TableCell>{typeof user.income === 'number' ? `₹${user.income.toLocaleString()}`: 'N/A'}</TableCell>
+                        <TableCell className="text-center">
+                          <Button size="icon" variant="ghost" onClick={() => handleToggleReferrals(user._id!)}>
+                            <ChevronDown className={`h-5 w-5 transition-transform ${expandedUserId === user._id ? 'rotate-180' : ''}`} />
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    );
-                  })
+                      
+                      {expandedUserId === user._id && (
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                          <TableCell colSpan={7} className="p-0">
+                            <div className="p-4">
+                              <h4 className="font-semibold text-md mb-2">Users Referred by {user.name}</h4>
+                              {referralLoading ? (
+                                <div className="flex items-center justify-center py-4 gap-2"><Loader2 className="h-5 w-5 animate-spin" /><span>Loading...</span></div>
+                              ) : referralData.length > 0 ? (
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow><TableHead>Name</TableHead><TableHead>Phone</TableHead><TableHead>Status</TableHead><TableHead>Role ID</TableHead><TableHead>Income</TableHead></TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {referralData.map(refUser => (
+                                      <TableRow key={refUser._id}>
+                                        <TableCell>{refUser.name}</TableCell>
+                                        <TableCell>{refUser.phoneNumber}</TableCell>
+                                        <TableCell><Badge variant={refUser.status === 'Block' ? 'destructive' : 'default'}>{refUser.status}</Badge></TableCell>
+                                        <TableCell className="font-mono text-xs">{refUser.latestRoleId}</TableCell>
+                                        <TableCell>{`₹${refUser.income?.toLocaleString() ?? '0'}`}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              ) : (
+                                <div className="text-center py-4 text-muted-foreground">This user has no referrals.</div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center h-24">
-                      No users found for the selected month and year.
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={7} className="h-20 text-center text-muted-foreground">No users found.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

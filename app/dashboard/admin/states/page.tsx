@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback } from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -36,203 +37,278 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { DeleteConfirmationModal } from "@/app/components/ui/delete-confirmation-modal";
-import { staticUsers, User } from "../data"; 
-import Link from "next/link";
+import { useDispatch, useSelector } from "react-redux";
+import { 
+  fetchUsers, 
+  addUser,
+  updateUser, 
+  deleteUser, 
+  selectUsers, 
+  selectLoading, 
+  selectError, 
+  selectPagination,
+  User 
+} from "@/lib/redux/userSlice";
+import { AppDispatch, RootState } from "@/lib/store";
+import { generateRoleId } from "@/lib/userActions";
 
-// --- Filter for State Users ---
-// This new page will only work with users who have the 'stat' role.
-const stateUsers = staticUsers.filter(user => user.role === 'stat');
 
-// The initial form state will default the role to 'stat'.
+// This function remains the same, as it's used for ID generation.
+// export const generatedRoleId = (role: string): string => {
+//     const validRoles = ["DIV", "DIST", "STAT", "BM"];
+//     if (!validRoles.includes(role)) {
+//       throw new Error("Invalid role type for roleId generation");
+//     }
+//     const randomDigits = Math.floor(100 + Math.random() * 900);
+//     return `${role}${randomDigits}`;
+// };
+
+// --- MODIFICATION START ---
+// List of user IDs that should not be deleted.
+const protectedUserIds = [
+  "689196e09a69b409d03f86e8",
+  "689197399a69b409d03f86eb",
+  "68919d7ef1dedfbfd356fecc",
+  "68919e48f1dedfbfd356fed8",
+  "68919eeff1dedfbfd356fedb",
+  "6891a224d7169e1e22af1b29",
+  "6893b75941efc3a7afaf577b",
+  "68940391362687a7140c4c7f",
+  "689404c3362687a7140c4c85",
+  "6894053d362687a7140c4c8a",
+  "689406be6513e46810ca48ae",
+  "689407781df54db8eed4af74",
+  "689407b01df54db8eed4af79",
+  "6894100d347fa8583c039093",
+];
+// --- MODIFICATION END ---
+
+
+// MODIFIED: Initial form state now defaults the role to 'STAT'
 const initialFormState: Omit<User, '_id' | 'createdOn'> = {
   name: "",
   email: "",
   phoneNumber: "",
-  gender: "Male",
-  role: "stat", // Default role is 'stat'
-  role_id: [],
-  income: 0,
+  emergencyNumber: "",
+  currentAddress: "",
+  permanentAddress: "",
+  password: "",
+  role: "STAT", // Default role is STAT
   status: "Active",
-  permanent_add: "",
-  current_add: "",
-  dob: "",
-  emergency_num: "",
-  referred_by: ""
+  income: 0,
+  account_number: "",
+  Ifsc: "",
+  upi_id: "",
+  roleId: [],
 };
 
-export default function StatesPage() {
-  // State is initialized with only the state-level users.
-  const [allStates, setAllStates] = useState<User[]>(stateUsers);
-  const [displayedStates, setDisplayedStates] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+// MODIFIED: Component renamed to DivUsers
+export default function DivUsers() {
+  const dispatch = useDispatch<AppDispatch>();
+  const users = useSelector(selectUsers);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const pagination = useSelector(selectPagination);
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("all");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
+  // REMOVED: `roleFilter` state is no longer needed.
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [form, setForm] = useState(initialFormState);
+  const [form, setForm] = useState<Omit<User, '_id' | 'createdOn'>>(initialFormState);
   const [formLoading, setFormLoading] = useState(false);
   
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const ITEMS_PER_PAGE = 10;
+  // MODIFIED: The role is now hardcoded to 'STAT' in the fetchUsers call.
+  useEffect(() => {
+    const params: any = {
+      page: pagination.currentPage,
+      role: 'STAT', // Always fetch users with the 'STAT' role
+      status: status,
+    };
+    
+    if (debouncedSearch) params.search = debouncedSearch;
+    
+    dispatch(fetchUsers(params));
+  }, [dispatch, debouncedSearch, status, pagination.currentPage]); // REMOVED: `roleFilter` from dependencies
 
-  // Debounce search input
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1);
     }, 500);
     return () => clearTimeout(handler);
   }, [search]);
 
-  // Filter users based on search and status
   useEffect(() => {
-    setLoading(true);
-    
-    const filteredUsers = allStates.filter(user => {
-        const searchLower = debouncedSearch.toLowerCase();
-        const matchesSearch = (
-            user.name.toLowerCase().includes(searchLower) ||
-            user.email.toLowerCase().includes(searchLower) ||
-            user.phoneNumber.includes(searchLower) ||
-            user.role_id[0]?.toLowerCase().includes(searchLower)
-        );
-        const matchesStatus = status === 'all' || user.status === status;
-        return matchesSearch && matchesStatus;
-    });
-
-    setTotalPages(Math.ceil(filteredUsers.length / ITEMS_PER_PAGE));
-    
-    const paginatedUsers = filteredUsers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-    setDisplayedStates(paginatedUsers);
-    
-    setLoading(false);
-  }, [allStates, debouncedSearch, status, page]);
-
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
   const handleStatusChange = useCallback((val: string) => {
     setStatus(val);
-    setPage(1);
   }, []);
   
+  // REMOVED: `handleRoleChange` is no longer needed.
+
   const handlePageChange = useCallback((newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) return;
-    setPage(newPage);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [totalPages]);
+    if (newPage < 1 || newPage > pagination.totalPages) return;
+    dispatch({ type: 'users/setCurrentPage', payload: newPage });
+  }, [dispatch, pagination.totalPages]);
 
   const openAddModal = () => {
     setEditUser(null);
-    setForm(initialFormState);
+    setForm(initialFormState); // This correctly sets the default role to 'STAT'
     setIsModalOpen(true);
   };
 
   const openEditModal = (user: User) => {
     setEditUser(user);
-    setForm({
+    const formState: Omit<User, '_id' | 'createdOn'> = {
       name: user.name ?? '',
       email: user.email ?? '',
       phoneNumber: user.phoneNumber ?? '',
-      gender: user.gender ?? 'Male',
-      role: 'stat', // Role is fixed to 'stat'
-      role_id: user.role_id ?? [],
-      income: user.income ?? 0,
+      emergencyNumber: user.emergencyNumber ?? '',
+      currentAddress: user.currentAddress ?? '',
+      permanentAddress: user.permanentAddress ?? '',
+      password: '',
+      role: user.role ?? 'STAT', // Ensure role is set, default to STAT
       status: user.status ?? 'Active',
-      permanent_add: user.permanent_add ?? '',
-      current_add: user.current_add ?? '',
-      dob: user.dob ? user.dob.split('T')[0] : '',
-      emergency_num: user.emergency_num ?? '',
-      referred_by: user.referred_by ?? '',
-    });
+      income: user.income ?? 0,
+      account_number: user.account_number ?? '',
+      Ifsc: user.Ifsc ?? '',
+      upi_id: user.upi_id ?? '',
+      roleId: user.roleId ?? [],
+    };
+    setForm(formState);
     setIsModalOpen(true);
   };
 
   const handleFormChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm(prevForm => ({...prevForm, [name]: name === 'income' ? (value === '' ? 0 : Number(value)) : value}));
+    setForm(prevForm => ({
+      ...prevForm, 
+      [name]: name === 'income' ? (value === '' ? 0 : Number(value)) : value
+    }));
   };
   
   const handleFormSelectChange = (fieldName: string, value: string) => {
     setForm(prevForm => ({ ...prevForm, [fieldName]: value as any }));
   };
+
+  const handleStatusToggle = () => {
+    setForm(prevForm => ({
+      ...prevForm,
+      status: prevForm.status === 'Active' ? 'Block' : 'Active'
+    }));
+  };
+
+  const refreshData = () => {
+    // MODIFIED: Ensure refresh also fetches only 'STAT' role
+    dispatch(fetchUsers({ page: pagination.currentPage, role: 'STAT', status: status, search: debouncedSearch }));
+  };
   
   const handleFormSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Ensure the role is always 'STAT' upon submission from this page
+    let dataToSubmit: User = { ...form, role: 'STAT' };
 
     try {
       if (editUser && editUser._id) {
-        const updatedUser = { ...editUser, ...form };
-        const updatedStates = allStates.map(u => u._id === editUser._id ? updatedUser : u);
-        setAllStates(updatedStates);
-        toast.success("State user updated successfully!");
+        // Since this page is for STAT users, we assume no role change is intended here.
+        // If a new roleId is needed for some other reason, that logic can be added.
+        const result = await dispatch(updateUser(editUser._id, dataToSubmit) as any);
+        if (result) {
+          toast.success("STAT User updated successfully!");
+          setIsModalOpen(false);
+          refreshData();
+        }
       } else {
-        const newUser: User = {
-          _id: (staticUsers.length + 1).toString() + new Date().getTime(),
-          ...form,
-          role_id: [form.role_id[0] || ''], 
-          createdOn: new Date().toISOString()
-        };
-        setAllStates(prevUsers => [newUser, ...prevUsers]);
-        toast.success("State user added successfully!");
+        // --- ADD USER LOGIC ---
+        // Generate a roleId as the role is a special one ('STAT')
+        // const newRoleId = generatedRoleId('STAT');
+        const newRoleId = generateRoleId('STAT');
+        dataToSubmit.roleId = [newRoleId];
+        
+        const result = await dispatch(addUser(dataToSubmit) as any);
+        if (result) {
+            toast.success("STAT User added successfully!");
+            setIsModalOpen(false);
+            dispatch(fetchUsers({ page: 1, role: 'STAT' }));
+            dispatch({ type: 'users/setCurrentPage', payload: 1 });
+        }
       }
-      setIsModalOpen(false);
+    } catch (error: any) {
+        toast.error(error.message || "Failed to save STAT user");
     } finally {
       setFormLoading(false);
     }
   };
 
+  // --- MODIFICATION START ---
+  // Added a check to prevent opening the delete modal for protected users.
   const openDeleteModal = (user: User) => {
+    if (user._id && protectedUserIds.includes(user._id)) {
+      toast.warning(`This user is protected and cannot be deleted.`);
+      return;
+    }
     setUserToDelete(user);
     setIsDeleteModalOpen(true);
   };
+  // --- MODIFICATION END ---
   
   const handleConfirmDelete = async () => {
-    if (!userToDelete?._id) return;
+    if (!userToDelete || !userToDelete._id) return;
+
     setDeleteLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
     try {
-      setAllStates(prev => prev.filter(u => u._id !== userToDelete._id));
-      toast.success(`State user "${userToDelete.name}" deleted successfully.`);
-      setIsDeleteModalOpen(false);
-      setUserToDelete(null);
-      if (displayedStates.length === 1 && page > 1) setPage(page - 1);
+      const result = await dispatch(deleteUser(userToDelete._id) as any);
+      if (result) {
+        toast.success(`User "${userToDelete.name}" deleted successfully.`);
+        setIsDeleteModalOpen(false);
+        setUserToDelete(null);
+        refreshData();
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete user");
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  const handleStatusToggle = () => {
-    setForm(prevForm => ({
-        ...prevForm,
-        status: prevForm.status === 'Active' ? 'Block' : 'Active'
-    }));
-  };
-
   return (
     <div className="w-full mx-auto mt-2">
       <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
-        <h1 className="text-4xl font-bold shrink-0">State List</h1>
+        {/* MODIFIED: Title changed */}
+        <h1 className="text-4xl font-bold shrink-0">STAT User List</h1>
         <div className="flex flex-wrap justify-end gap-2 w-full">
-          <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="flex-grow sm:flex-grow-0 sm:w-48"/>
+          <Input 
+            placeholder="Search by Name, Role, Phone..." 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)} 
+            className="flex-grow sm:flex-grow-0 sm:w-48"
+          />
+          {/* REMOVED: Role filter select dropdown */}
           <Select value={status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-full sm:w-32"><SelectValue/></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-32">
+              <SelectValue/>
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="Active">Active</SelectItem>
               <SelectItem value="Block">Block</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" className="gap-1" onClick={openAddModal}><Plus className="w-4 h-4"/> Add State User</Button>
+          <Button size="sm" className="gap-1" onClick={openAddModal}>
+            <Plus className="w-4 h-4"/> Add STAT User
+          </Button>
         </div>
       </div>
       
@@ -246,7 +322,7 @@ export default function StatesPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone No.</TableHead>
-                  <TableHead>State ID</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Income</TableHead>
                   <TableHead>Actions</TableHead>
@@ -254,28 +330,76 @@ export default function StatesPage() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8"><div className="flex justify-center items-center gap-2"><Loader2 className="h-6 w-6 animate-spin" /><span>Loading states...</span></div></TableCell></TableRow>
-                ) : displayedStates.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8">{debouncedSearch || status !== "all" ? "No states found for the current filters." : "No states found."}</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      <div className="flex justify-center items-center gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <span>Loading STAT users...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      { "No STAT users found." }
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  displayedStates.map((user: User, idx: number) => (
+                  users.map((user: User, idx: number) => (
                     <TableRow key={user._id}>
-                      <TableCell>{(page - 1) * ITEMS_PER_PAGE + idx + 1}</TableCell>
-                      <TableCell><div className="flex items-center gap-3"><Avatar><AvatarFallback>{user.name?.[0]?.toUpperCase()}</AvatarFallback></Avatar><span className="font-medium">{user.name}</span></div></TableCell>
+                      <TableCell>
+                        {(pagination.currentPage - 1) * 15 + idx + 1}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarFallback>
+                              {user.name?.[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{user.name}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>{user.phoneNumber}</TableCell>
-                      <TableCell>{user.role_id[0] || '-'}</TableCell>
-                      <TableCell><Badge variant={user.status === 'Block' ? "destructive" : "default"}>{user.status}</Badge></TableCell>
-                      <TableCell>₹{user.income.toLocaleString()}</TableCell>
-                      <TableCell><div className="flex gap-2">
-                        <Button asChild size="icon" variant="ghost" title="View">
+                      <TableCell>
+                        <Badge variant="outline">{user.role}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.status === 'Block' ? "destructive" : "default"}>
+                          {user.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>₹{user.income?.toLocaleString() || '0'}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button asChild size="icon" variant="ghost" title="View">
                             <Link href={`/dashboard/admin/user/${user._id}`}>
-                                <Eye className="w-4 h-4 text-blue-600" />
+                              <Eye className="w-4 h-4 text-blue-600" />
                             </Link>
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => openEditModal(user)} title="Edit"><Edit className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => openDeleteModal(user)} title="Delete"><Trash2 className="w-4 h-4 text-red-500" /></Button>
-                      </div></TableCell>
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            onClick={() => openEditModal(user)} 
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          {/* --- MODIFICATION START --- */}
+                                {/* The delete button is now disabled if the user's ID is in the protected list */}
+                                {(user._id && !protectedUserIds.includes(user._id)) && <Button 
+                                  size="icon" 
+                                  variant="ghost" 
+                                  onClick={() => openDeleteModal(user)} 
+                                  title="Delete"
+                                  disabled={user._id ? protectedUserIds.includes(user._id) : false}
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </Button>}
+                                {/* --- MODIFICATION END --- */}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -285,58 +409,221 @@ export default function StatesPage() {
         </CardContent>
       </Card>
 
-      {!loading && totalPages > 1 && (
-        <div className="mt-4"><Pagination>
+      {!loading && pagination.totalPages > 1 && (
+        <div className="mt-4">
+          <Pagination>
             <PaginationContent>
-              <PaginationItem className={page === 1 ? "pointer-events-none opacity-50" : ""}><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); handlePageChange(page - 1); }} /></PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (<PaginationItem key={pageNum}><PaginationLink href="#" isActive={page === pageNum} onClick={(e) => { e.preventDefault(); handlePageChange(pageNum); }}>{pageNum}</PaginationLink></PaginationItem>))}
-              <PaginationItem className={page === totalPages ? "pointer-events-none opacity-50" : ""}><PaginationNext href="#" onClick={(e) => { e.preventDefault(); handlePageChange(page + 1); }} /></PaginationItem>
+              <PaginationItem className={pagination.currentPage === 1 ? "pointer-events-none opacity-50" : ""}>
+                <PaginationPrevious 
+                  href="#" 
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    handlePageChange(pagination.currentPage - 1); 
+                  }} 
+                />
+              </PaginationItem>
+              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(pageNum => (
+                <PaginationItem key={pageNum}>
+                  <PaginationLink 
+                    href="#" 
+                    isActive={pagination.currentPage === pageNum} 
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      handlePageChange(pageNum); 
+                    }}
+                  >
+                    {pageNum}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem className={pagination.currentPage === pagination.totalPages ? "pointer-events-none opacity-50" : ""}>
+                <PaginationNext 
+                  href="#" 
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    handlePageChange(pagination.currentPage + 1); 
+                  }} 
+                />
+              </PaginationItem>
             </PaginationContent>
-        </Pagination></div>
+          </Pagination>
+        </div>
       )}
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[800px]">
-          <DialogHeader><DialogTitle>{editUser ? 'Edit State User' : 'Add New State User'}</DialogTitle><DialogDescription>{editUser ? 'Update the details for this state user.' : 'Fill in the details for the new state user.'}</DialogDescription></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>
+              {editUser ? 'Edit STAT User' : 'Add New STAT User'}
+            </DialogTitle>
+            <DialogDescription>
+              {editUser ? 'Update the details for this STAT user.' : 'Fill in the details for the new STAT user.'}
+            </DialogDescription>
+          </DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4 mt-2 max-h-[70vh] overflow-y-auto pr-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2"><Label htmlFor="name">Name*</Label><Input id="name" name="name" value={form.name} onChange={handleFormChange} required /></div>
-              <div className="space-y-2"><Label htmlFor="email">Email*</Label><Input id="email" name="email" type="email" value={form.email} onChange={handleFormChange} required/></div>
-              <div className="space-y-2"><Label htmlFor="phoneNumber">Phone Number*</Label><Input id="phoneNumber" name="phoneNumber" value={form.phoneNumber} onChange={handleFormChange} required /></div>
-              <div className="space-y-2"><Label htmlFor="emergency_num">Emergency Number</Label><Input id="emergency_num" name="emergency_num" value={form.emergency_num} onChange={handleFormChange}/></div>
-              <div className="space-y-2"><Label htmlFor="dob">Date of Birth</Label><Input id="dob" name="dob" type="date" value={form.dob} onChange={handleFormChange}/></div>
-              <div className="space-y-2"><Label htmlFor="gender">Gender</Label><Select value={form.gender} onValueChange={(value) => handleFormSelectChange('gender', value)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent></Select></div>
-              <div className="space-y-2"><Label htmlFor="role_id">State ID*</Label><Input id="role_id" name="role_id" placeholder="e.g., STAT001" value={form.role_id[0] || ''} onChange={(e) => setForm(f => ({...f, role_id: [e.target.value]}))} required /></div>
-              <div className="space-y-2"><Label htmlFor="income">Income</Label><Input id="income" name="income" type="number" value={form.income || ''} onChange={handleFormChange}/></div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Name*</Label>
+                <Input 
+                  id="name" 
+                  name="name" 
+                  value={form.name} 
+                  onChange={handleFormChange} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email*</Label>
+                <Input 
+                  id="email" 
+                  name="email" 
+                  type="email" 
+                  value={form.email} 
+                  onChange={handleFormChange} 
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input id="phoneNumber" name="phoneNumber" value={form.phoneNumber} onChange={handleFormChange} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emergencyNumber">Emergency Number</Label>
+                <Input id="emergencyNumber" name="emergencyNumber" value={form.emergencyNumber} onChange={handleFormChange} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="currentAddress">Current Address</Label>
+                <Textarea id="currentAddress" name="currentAddress" value={form.currentAddress} onChange={handleFormChange} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="permanentAddress">Permanent Address</Label>
+                <Textarea id="permanentAddress" name="permanentAddress" value={form.permanentAddress} onChange={handleFormChange} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password*</Label>
+                <Input 
+                  id="password" 
+                  name="password" 
+                  type="password"
+                  value={form.password} 
+                  onChange={handleFormChange} 
+                  required={!editUser}
+                />
+              </div>
+              {/* MODIFIED: Role selection is now disabled as it's fixed to 'STAT' */}
+              <div className="space-y-2">
+                <Label htmlFor="role">Role*</Label>
+                <Select value={form.role} onValueChange={val => handleFormSelectChange('role', val)} disabled>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="STAT">STAT</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="income">Income</Label>
+                <Input 
+                  id="income" 
+                  name="income" 
+                  type="number" 
+                  value={form.income || ''} 
+                  onChange={handleFormChange}
+                />
+              </div>
               
               {editUser ? (
                 <div className="space-y-2">
                   <Label>Status</Label>
-                  <div><Badge variant={form.status === 'Block' ? 'destructive' : 'default'}>{form.status}</Badge></div>
+                  <div>
+                    <Badge variant={form.status === 'Block' ? 'destructive' : 'default'}>
+                      {form.status}
+                    </Badge>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-2"><Label htmlFor="status">Status</Label><Select value={form.status} onValueChange={(value) => handleFormSelectChange('status', value)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="Active">Active</SelectItem><SelectItem value="Block">Block</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select 
+                    value={form.status} 
+                    onValueChange={(value) => handleFormSelectChange('status', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue/>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Block">Block</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
-              
-              <div className="space-y-2 md:col-span-2"><Label htmlFor="referred_by">Referred By</Label><Input id="referred_by" name="referred_by" placeholder="Referrer's Role ID" value={form.referred_by} onChange={handleFormChange}/></div>
-              <div className="space-y-2"><Label htmlFor="current_add">Current Address</Label><Textarea id="current_add" name="current_add" value={form.current_add} onChange={handleFormChange}/></div>
-              <div className="space-y-2"><Label htmlFor="permanent_add">Permanent Address</Label><Textarea id="permanent_add" name="permanent_add" value={form.permanent_add} onChange={handleFormChange}/></div>
+
+              <div className="space-y-2">
+                <Label htmlFor="account_number">Account Number</Label>
+                <Input 
+                  id="account_number" 
+                  name="account_number" 
+                  value={form.account_number} 
+                  onChange={handleFormChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="Ifsc">IFSC Code</Label>
+                <Input 
+                  id="Ifsc" 
+                  name="Ifsc" 
+                  value={form.Ifsc} 
+                  onChange={handleFormChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="upi_id">UPI ID</Label>
+                <Input 
+                  id="upi_id" 
+                  name="upi_id" 
+                  value={form.upi_id} 
+                  onChange={handleFormChange}
+                />
+              </div>
             </div>
-            
+
             <DialogFooter className="pt-4">
               {editUser && (
-                <Button type="button" variant={form.status === 'Active' ? 'destructive' : 'secondary'} onClick={handleStatusToggle} disabled={formLoading} className="mr-auto">
-                  {form.status === 'Active' ? 'Block State User' : 'Activate State User'}
+                <Button 
+                  type="button" 
+                  variant={form.status === 'Active' ? 'destructive' : 'secondary'} 
+                  onClick={handleStatusToggle} 
+                  disabled={formLoading} 
+                  className="mr-auto"
+                >
+                  {form.status === 'Active' ? 'Block User' : 'Activate User'}
                 </Button>
               )}
-              <DialogClose asChild><Button type="button" variant="outline" disabled={formLoading}>Cancel</Button></DialogClose>
-              <Button type="submit" disabled={formLoading}>{formLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}{formLoading ? 'Saving...' : (editUser ? 'Update State User' : 'Add State User')}</Button>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={formLoading}>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type="submit" disabled={formLoading}>
+                {formLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {formLoading ? 'Saving...' : (editUser ? 'Update User' : 'Add User')}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
       
-      <DeleteConfirmationModal open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} title="Delete State User" description={`Are you sure you want to delete the state user "${userToDelete?.name}"? This action cannot be undone.`} onConfirm={handleConfirmDelete} isDeleting={deleteLoading} confirmButtonText="Delete State User" />
+      <DeleteConfirmationModal 
+        open={isDeleteModalOpen} 
+        onOpenChange={setIsDeleteModalOpen} 
+        title="Delete User" 
+        description={`Are you sure you want to delete the user "${userToDelete?.name}"? This action cannot be undone.`} 
+        onConfirm={handleConfirmDelete} 
+        isDeleting={deleteLoading} 
+        confirmButtonText="Delete User" 
+      />
     </div>
   );
 }

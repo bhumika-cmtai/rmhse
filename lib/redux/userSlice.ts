@@ -1,28 +1,45 @@
 import { createSlice, Dispatch } from "@reduxjs/toolkit";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { RootState } from "../store";
+import Cookies from 'js-cookie';
+
+export interface userIdInterface {
+  name: string,
+  _id: string
+}
 
 export interface User {
   _id?: string;
-  name: string;
-  email: string;
-  phoneNumber: string;
-  whatsappNumber?: string;
-  city: string;
-  role: string;
-  password?: string;
+  name?: string;
+  email?: string;
+  password?: string; // Should generally not be sent to the client
+  phoneNumber?: string;
+  emergencyNumber?: string;
+  permanentAddress?: string;
+  currentAddress?: string;
+  gender?: string;
+  roleId?: string[];
+  withdrawRequest?: string[];
+  extendRequest?: string[];
+  limit?: number;
+  role?: string;
+  adharFront?: string; // URL to the image
+  adharBack?: string;  // URL to the image
+  pancard?: string;    // URL to the image
+  refferedBy?: string;
+  memberId?: string;
   status?: string;
-  leaderCode?:string;
-  // abhi_aap_kya_karte_hai?:string;
-  // work_experience?:string;
-  createdOn?: string;
+  createdOn?: string; // This is a timestamp string, e.g., "1754374692923"
   updatedOn?: string;
   income?: number;
+  dob?: string;
   account_number?: string;
-  Ifsc?: string;
+  Ifsc?: string; // Note the capitalization from the schema
   upi_id?: string;
-  registeredClientCount?: number
+  // This field was in your component, adding it here for consistency.
+  profileImage?: string; 
 }
+// --- END OF UPDATED INTERFACE ---
 
 export interface Pagination {
   currentPage: number;
@@ -30,14 +47,22 @@ export interface Pagination {
   totalUsers: number;
 }
 
+export interface CommissionHistory {
+  amount: number;
+  sourceUserName: string;
+  sourceUserLatestRoleId: string;
+}
+
+
 export interface UserState {
   data: User[];
   loading: boolean;
   error: string | null;
   selectedUser: User | null;
   pagination: Pagination;
-  totalUsersCount: number; // For dashboard count
+  totalUsersCount: number;
   totalIncome: number;
+  commissionHistory: CommissionHistory[];
 }
 
 const initialState: UserState = {
@@ -50,9 +75,13 @@ const initialState: UserState = {
     totalPages: 1,
     totalUsers: 0,
   },
-  totalUsersCount: 0, // Initial value for dashboard count
+  totalUsersCount: 0,
   totalIncome: 0,
-};  
+  commissionHistory: [],
+};
+
+
+
 
 const userSlice = createSlice({
   name: "users",
@@ -65,7 +94,8 @@ const userSlice = createSlice({
       state.pagination.currentPage = action.payload.currentPage;
       state.loading = false;
       state.error = null;
-    },  
+    },
+      
     setLoading: (state, action) => {
       state.loading = action.payload;
     },
@@ -91,15 +121,20 @@ const userSlice = createSlice({
     setTotalIncome: (state, action) => {
       state.totalIncome = action.payload;
     },
+    setCommissionHistory: (state, action) => {
+      state.commissionHistory = action.payload;
+      state.loading = false;
+      state.error = null;
+    },
   },
 }); 
 
-export const { setUsers, setLoading, setError, setSelectedUser, clearSelectedUser, setCurrentPage, setTotalUsersCount,setTotalIncome } = userSlice.actions;
+export const { setUsers, setLoading, setError, setSelectedUser, clearSelectedUser, setCurrentPage, setTotalUsersCount,setTotalIncome, setCommissionHistory } = userSlice.actions;
 
 export const fetchUsersCount = () => async (dispatch: Dispatch) => {
   try {
     const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/getUsersCount`);
-    if (response.data) {
+    if (response.data && response.data.data) {
       dispatch(setTotalUsersCount(response.data.data.count));
     } else {
       console.error("Failed to fetch user count:", response.data.message);
@@ -110,29 +145,38 @@ export const fetchUsersCount = () => async (dispatch: Dispatch) => {
   }
 };
 
-export const fetchUsers = (params?: { search?: string; status?: string; page?: number, startDate?: string, endDate?: string }) => async (dispatch: Dispatch) => {
+export const fetchUsers = (params?: { 
+  search?: string; 
+  status?: string; 
+  page?: number; 
+  role?: string;
+  month?: number; 
+  year?: number; 
+  limit?: number;
+}) => async (dispatch: Dispatch) => {
   dispatch(setLoading(true));
   try {
     const query = [];
     if (params?.search) query.push(`searchQuery=${encodeURIComponent(params.search)}`);
     if (params?.status && params.status !== 'all') query.push(`status=${encodeURIComponent(params.status)}`);
     if (params?.page) query.push(`page=${params.page}`);
-    // --- MODIFICATION: Add dates to the query string if they exist ---
-    if (params?.startDate) query.push(`startDate=${params.startDate}`);
-    if (params?.endDate) query.push(`endDate=${params.endDate}`);
+    // MODIFIED: Add role to the query string if it exists and is not 'all'
+    if (params?.role && params.role !== 'all') query.push(`role=${encodeURIComponent(params.role)}`);
+    if (params?.month) query.push(`month=${params.month}`);
+    if (params?.year) query.push(`year=${params.year}`);
 
     const queryString = query.length ? `?${query.join('&')}` : '';
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/getallUsers${queryString}`);
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/getAllUsers${queryString}`);
     
     if (response.status === 200) {
       dispatch(setUsers(response.data.data));
-      if (params?.page) dispatch(setCurrentPage(params.page));
     } else {
-      dispatch(setError(response.data.message));
+      dispatch(setError(response.data.message || "Failed to fetch users"));
     }
-  } catch (error: unknown) {
-    const message = typeof error === "object" && error && "message" in error ? (error as { message?: string }).message : String(error);
-    dispatch(setError(message || "Unknown error"));
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    const message = (axiosError.response?.data as any)?.message || axiosError.message || "Unknown error occurred";
+    dispatch(setError(message));
   }
 };
 
@@ -140,7 +184,7 @@ export const fetchUserById = (id: string) => async (dispatch: Dispatch) => {
   dispatch(setLoading(true));
   try {
     const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/getUser/${id}`);
-        const data: User = response.data;
+        const data: User = response.data.data;
     if (response.status === 200) {
       dispatch(setSelectedUser(data));    
       dispatch(setLoading(false)); 
@@ -157,7 +201,8 @@ export const addUser = (user: User) => async (dispatch: Dispatch) => {
   dispatch(setLoading(true));
   try {
     const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/addUser`, user);
-    if (response.status === 201) {
+    if (response.data) {
+      console.log(response.data)
       dispatch(setLoading(false));
       return response.data;
     } else {
@@ -170,25 +215,12 @@ export const addUser = (user: User) => async (dispatch: Dispatch) => {
   }
 };
 
-export const addManyUsers = (users: User[]) => async (dispatch: Dispatch) => {
-  try {
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/addManyUser`, users);
-    if (response.status === 201) {
-      return response.data;
-    } else {
-      dispatch(setError(response.data.message));
-    }
-  } catch (error: unknown) {
-    const message = typeof error === "object" && error && "message" in error ? (error as { message?: string }).message : String(error);
-    dispatch(setError(message || "Unknown error"));
-  }
-};
-
 export const updateUser = (id: string, user: User) => async (dispatch: Dispatch) => {
   dispatch(setLoading(true));
   try {
     const response = await axios.put(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/updateUser/${id}`, user);
-    if (response.status === 200) {
+    if (response.data) {
+      console.log(response.data)
       dispatch(setLoading(false));
       return response.data;
     } else {
@@ -219,7 +251,7 @@ export const deleteUser = (id: string) => async (dispatch: Dispatch) => {
 // New action to delete multiple users
 export const deleteManyUsers = (ids: string[]) => async (dispatch: Dispatch) => {
   try {
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/deleteManyUsers`, { ids });
+    const response = await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/deleteManyUsers`, { data: { ids } });
     if (response.data && response.data.success) {
       return true;
     }
@@ -230,28 +262,36 @@ export const deleteManyUsers = (ids: string[]) => async (dispatch: Dispatch) => 
   }
 };
 
-export const fetchLeaderCode = (leaderCode: string) => async (dispatch: Dispatch) => {
+export const getCommissionHistory = (userId: string) => async (dispatch: Dispatch) => {
   dispatch(setLoading(true));
   try {
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/getLeaderCode/${leaderCode}`);
-    
-    if (!response.data.data) {
-        const errorMsg = response.data.message || "Leader code not found";
-        dispatch(setError(errorMsg));
-        throw new Error(errorMsg); 
-    }
-    
-    // Success case
-    dispatch(setLoading(false));
-    return response.data.data; // Return the data on success
+    // Get the auth token from cookies to authorize the request
+    // const token = Cookies.get('auth-token'); 
+    // if (!token) {
+    //     throw new Error("Authentication token not found. Please log in again.");
+    // }
+      // console.log(token)
+    // The backend route is /commission-history/:userId
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/users/commission-history/${userId}`,
+      // { headers: { 'Authorization': `Bearer ${token}` } } // Pass the token in the header
+    );
+    console.log(response)
 
-  } catch (error: any) {
-    const message = error.response?.data?.message || error.message || "Unknown error";
+    // Assuming the API returns a structure like { success: true, data: [...] }
+    if (response.data) {
+      console.log(response.data)
+      dispatch(setCommissionHistory(response.data.data));
+    } else {
+      dispatch(setError(response.data.message || 'Failed to fetch commission history'));
+    }
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    const message = (axiosError.response?.data as any)?.message || axiosError.message || "An unknown error occurred";
     dispatch(setError(message));
-    dispatch(setLoading(false));
-    throw new Error(message); // Re-throw the error to be caught by the component
   }
 };
+
 
 export const fetchTotalIncome = () => async (dispatch: Dispatch) => {
   try {
@@ -281,4 +321,7 @@ export const selectTotalPages = (state: RootState) => state.users.pagination.tot
 export const selectTotalUsers = (state: RootState) => state.users.pagination.totalUsers;
 export const selectTotalUsersCount = (state: RootState) => state.users.totalUsersCount;
 export const selectTotalIncome = (state: RootState) => state.users.totalIncome;
+
+export const selectCommissionHistory = (state: RootState) => state.users.commissionHistory;
+// export const 
 export default userSlice.reducer;

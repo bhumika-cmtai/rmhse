@@ -15,6 +15,8 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard/user", icon: LayoutGrid },
   { name: "Reffered Users", href: "/dashboard/user/user-list", icon: Users },
   { name: "Wallet", href: "/dashboard/user/wallet", icon: Wallet },
+  { name: "Extend Limit", href: "/dashboard/user/limit-extension", icon: Wallet },
+  { name: "Income History", href: "/dashboard/user/income-history", icon: Wallet },
   { name: "Setting", href: "/dashboard/user/setting", icon: Settings },
   { name: "Logout", href: "/logout", icon: LogOut },
 ];

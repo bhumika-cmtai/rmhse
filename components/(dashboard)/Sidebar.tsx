@@ -16,7 +16,11 @@ import {
   BadgeCheck,
   ShieldCheck,
   ClipboardPlus,
-  Wallet
+  Wallet,
+  Video,
+  Bell,
+  Contact2,
+  Coins
 } from "lucide-react";
 
 const navigation = [
@@ -29,7 +33,11 @@ const navigation = [
   { name: "Wallet", href: "/dashboard/admin/wallet", icon: Wallet },
   { name: "Withdraw Request", href: "/dashboard/admin/withdraw-requests", icon: BadgeCheck },
   { name: "Extend Request", href: "/dashboard/admin/extend-requests", icon: ShieldCheck },
+  { name: "Income History", href: "/dashboard/admin/income-history", icon: Coins },
   {name: "Report", href: "/dashboard/admin/report", icon: ClipboardPlus},
+  {name: "Contacts", href: "/dashboard/admin/contacts", icon: Contact2},
+  {name: "Notification", href: "/dashboard/admin/notifications", icon: Bell},
+  {name: "Manage Video", href: "/dashboard/admin/manage-video", icon: Video},
   { name: "Setting", href: "/dashboard/admin/settings", icon: Settings },
   { name: "Logout", href: "/logout", icon: LogOut },
 ];

@@ -7,51 +7,74 @@ import { Mail, Lock, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
+import { login } from "@/lib/redux/authSlice";
+import { RootState } from "@/lib/store";
 
-// Combined the components into one for a clean, page-level implementation.
 const LoginPage = () => {
   const router = useRouter();
+  const dispatch = useDispatch();
   
-  // --- All your existing logic is preserved ---
+  const { isLoading, error, isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Handle authentication state changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      toast.success("Successfully logged in!");
+      // console.log(user)
+      // console.log(user, "user")
+      // console.log(isAuthenticated, "isAuthenticated")
+      
+      // Use replace instead of push to prevent back navigation to login
+      if (user.role === 'admin') {
+        // console.log("redirecting to admin dashboard")
+        router.push('/dashboard/admin');
+      } else if (user.role) {
+        console.log("redirecting to user dashboard")
+        router.push('/dashboard/user');
+      } else {
+        // console.log("unknown role, redirecting to dashboard")
+        router.push('/login');
+      }
+    }
+  }, [isAuthenticated, user, router]);
+
+  // Handle error display
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
 
-    const users = [
-      { email: "admin@gmail.com", password: "admin123", role: "admin" },
-      { email: "test@gmail.com", password: "test123", role: "user" },
-    ];
-
-    const matchedUser = users.find(
-      (u) => u.email === email && u.password === password
-    );
-
-    // Using a timeout to simulate network delay
-    setTimeout(() => {
-      if (matchedUser) {
-        toast.success("Successfully logged in!");
-        setTimeout(() => {
-          if (matchedUser.role === "admin") {
-            router.push("/dashboard/admin");
-          } else {
-            router.push("/dashboard/user");
-          }
-        }, 1000);
-      } else {
-        toast.error("Invalid credentials");
-        setLoading(false);
-      }
-    }, 1000);
+    // console.log("Submitting login form...");
+    const result = await dispatch(login({ email, password, rememberMe }) as any);
+    
+    // console.log("Login result:", result);
+    
+    if (!result) {
+      // console.log("Login failed, result is null");
+      // Error is already handled by the slice
+      return;
+    }
+    
+    // console.log("Login successful, result:", result);
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-yellow-100 px-4">
-      {/* --- UI has been completely updated to match the image --- */}
       <div className="w-full max-w-sm p-8 sm:py-8 sm:px-8 space-y-8 bg-gradient-to-br from-yellow-200/40 to-green-200/75 rounded-[20px] shadow-lg">
         
         {/* Header */}
@@ -74,7 +97,7 @@ const LoginPage = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              disabled={loading}
+              disabled={isLoading}
             />
           </div>
 
@@ -90,16 +113,31 @@ const LoginPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              disabled={loading}
+              disabled={isLoading}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 hover:text-gray-700"
-              disabled={loading}
+              disabled={isLoading}
             >
               {showPassword ? "HIDE" : "SHOW"}
             </button>
+          </div>
+
+          {/* Remember Me Checkbox */}
+          <div className="flex items-center">
+            <input
+              id="remember-me"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 text-pink-500 focus:ring-pink-400 border-gray-300 rounded"
+              disabled={isLoading}
+            />
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-800">
+              Remember me
+            </label>
           </div>
           
           {/* Login Button */}
@@ -107,9 +145,9 @@ const LoginPage = () => {
             type="submit"
             className="w-full py-5 font-semibold text-gray-800 bg-[#FDECB4] rounded-[10px] cursor-pointer  hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition duration-300"
             style={{ boxShadow: '0 6px 4px 0 rgba(0, 0, 0, 0.25)' }}
-            disabled={loading}
+            disabled={isLoading}
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Logging in...

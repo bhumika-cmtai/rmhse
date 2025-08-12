@@ -1,36 +1,33 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import React, { useState, useMemo, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Wallet, Send, Hourglass, CheckCircle, XCircle, Info } from "lucide-react";
+import { Wallet, Send, Hourglass, CheckCircle, XCircle, Info, Loader2, Loader } from "lucide-react";
 import { toast } from "sonner";
 
-// Define the structure for a single withdrawal request
-type WithdrawalRequest = {
-  id: string;
-  amount: number;
-  status: 'pending' | 'approved' | 'rejected';
-  date: Date;
-  rejectionReason?: string; // Optional field for the reason
-};
-
-// Mock data for existing withdrawal history with a rejection reason
-const mockWithdrawals: WithdrawalRequest[] = [
-  { id: 'w3', amount: 500.00, status: 'approved', date: new Date(2024, 5, 15) },
-  { id: 'w2', amount: 1200.50, status: 'rejected', date: new Date(2024, 6, 2), rejectionReason: "Invalid bank details provided. Please update your payment information." },
-  { id: 'w1', amount: 250.25, status: 'approved', date: new Date(2024, 4, 20) },
-];
+import { AppDispatch, RootState } from "@/lib/store";
+import { fetchCurrentUser } from "@/lib/redux/authSlice";
+import {
+  createWithdrawal,
+  getWithdrawalsByUserId,
+  selectWithdrawals,
+  selectWithdrawalLoading,
+  selectWithdrawalError,
+} from "@/lib/redux/withdrawalSlice";
+import { Withdrawal } from "@/lib/redux/withdrawalSlice";
 
 // A helper component to render the correct status badge with colors
-const WithdrawalStatusBadge = ({ status }: { status: WithdrawalRequest['status'] }) => {
+const WithdrawalStatusBadge = ({ status }: { status: Withdrawal['status'] }) => {
   const statusConfig = {
     pending: { variant: "default", icon: <Hourglass className="h-3 w-3" />, label: "Pending" },
+    processing: { variant: "default", icon: <Loader  className="h-3 w-3" />, label: "Processing" },
     approved: { variant: "success", icon: <CheckCircle className="h-3 w-3" />, label: "Approved" },
     rejected: { variant: "destructive", icon: <XCircle className="h-3 w-3" />, label: "Rejected" },
   };
@@ -53,7 +50,7 @@ const RequestInfoModal = ({
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    request: WithdrawalRequest | null;
+    request: Withdrawal | null;
   }) => {
     if (!request) return null;
   
@@ -63,7 +60,7 @@ const RequestInfoModal = ({
           <DialogHeader>
             <DialogTitle>Request Details</DialogTitle>
             <DialogDescription>
-              Viewing details for your withdrawal request made on {request.date.toLocaleDateString()}.
+              Viewing details for your withdrawal request made on {new Date(request.createdOn).toLocaleDateString()}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -80,7 +77,7 @@ const RequestInfoModal = ({
               <div className="space-y-2">
                 <Label>Reason for Rejection</Label>
                 <p className="text-sm font-medium p-3 bg-muted rounded-md border">
-                  {request.rejectionReason || "No reason provided."}
+                  {request.reason || "No reason provided."}
                 </p>
               </div>
             )}
@@ -96,21 +93,41 @@ const RequestInfoModal = ({
   };
 
 export default function WalletPage() {
-  const [walletBalance, setWalletBalance] = useState(2540.50);
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>(mockWithdrawals);
+  const dispatch: AppDispatch = useDispatch();
   
+  const { user, isLoading: authLoading } = useSelector((state: RootState) => state.auth);
+  const withdrawals = useSelector(selectWithdrawals);
+  const isLoading = useSelector(selectWithdrawalLoading);
+  const error = useSelector(selectWithdrawalError);
+
+  const [withdrawAmount, setWithdrawAmount] = useState("");
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
-  const [requestToShowInfo, setRequestToShowInfo] = useState<WithdrawalRequest | null>(null);
+  const [requestToShowInfo, setRequestToShowInfo] = useState<Withdrawal | null>(null);
+
+  useEffect(() => {
+    dispatch(fetchCurrentUser());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (user?._id) {
+      dispatch(getWithdrawalsByUserId(user._id));
+    }
+  }, [dispatch, user]);
 
   const hasPendingRequest = useMemo(() => 
     withdrawals.some(req => req.status === 'pending'), 
     [withdrawals]
   );
 
-  const handleWithdrawRequest = () => {
+  const handleWithdrawRequest = async () => {
     const amount = parseFloat(withdrawAmount);
 
+    // --- All validation checks are performed here first ---
+
+    if (!user?._id) {
+        toast.error("Could not identify user. Please refresh and try again.");
+        return;
+    }
     if (hasPendingRequest) {
       toast.error("You already have a withdrawal request pending.");
       return;
@@ -119,32 +136,55 @@ export default function WalletPage() {
       toast.error("Please enter a valid positive amount.");
       return;
     }
-    if (amount > walletBalance) {
+    if (user?.income !== undefined && amount > user.income) {
       toast.error("Withdrawal amount cannot exceed your current balance.");
       return;
     }
+    // Check if user has provided either bank details OR a UPI ID
+    const hasBankDetails = user.Ifsc && user.account_number && user.upi_id;
+    // const hasUpiId = user.upi_id;
 
-    const newRequest: WithdrawalRequest = {
-      id: `w${Date.now()}`,
-      amount: amount,
-      status: 'pending',
-      date: new Date(),
-    };
+    if (!hasBankDetails) {
+        toast.error("Please add your bank details or UPI ID in your profile to withdraw.");
+        return;
+    }
+    
+    // --- If all checks pass, proceed to dispatch ---
 
-    setWithdrawals([newRequest, ...withdrawals]);
-    toast.success(`Request to withdraw ₹${amount.toFixed(2)} has been sent!`);
-    setWithdrawAmount("");
+    const result = await dispatch(createWithdrawal({ userId: user._id, amount }));
+
+    if (result) {
+        toast.success(`Request to withdraw ₹${amount.toFixed(2)} has been sent!`);
+        setWithdrawAmount("");
+    } else if (error) {
+        toast.error(error);
+    }
   };
   
-  const handleOpenInfoModal = (request: WithdrawalRequest) => {
+  const handleOpenInfoModal = (request: Withdrawal) => {
     setRequestToShowInfo(request);
     setIsInfoModalOpen(true);
   };
 
   const sortedWithdrawals = useMemo(() => 
-    withdrawals.sort((a, b) => b.date.getTime() - a.date.getTime()), 
+    [...withdrawals].sort((a, b) => b.createdOn - a.createdOn), 
     [withdrawals]
   );
+
+
+  const formatDate = (timestamp: string | number) => {
+    if (!timestamp) return 'N/A';
+    // Ensure the timestamp is a number before creating a Date
+    const numericTimestamp = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
+    if (isNaN(numericTimestamp)) {
+        return "Invalid Date";
+    }
+    return new Date(numericTimestamp).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
   return (
     <div className="w-full mx-auto mt-2">
@@ -159,9 +199,13 @@ export default function WalletPage() {
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">
-              ₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
+            {authLoading ? (
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            ) : (
+                <div className="text-4xl font-bold">
+                ₹{(user?.income ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+            )}
             <p className="text-xs text-muted-foreground mt-1">
               This is your total withdrawable amount.
             </p>
@@ -180,14 +224,16 @@ export default function WalletPage() {
                 placeholder="e.g., 500.00"
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
-                disabled={hasPendingRequest}
+                disabled={hasPendingRequest || isLoading}
               />
               <Button
                 className="w-full sm:w-auto gap-2"
                 onClick={handleWithdrawRequest}
-                disabled={hasPendingRequest}
+                disabled={hasPendingRequest || isLoading}
               >
-                {hasPendingRequest ? (
+                {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                ) : hasPendingRequest ? (
                   <>
                     <Hourglass className="h-4 w-4" />
                     Request Pending
@@ -225,10 +271,16 @@ export default function WalletPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {sortedWithdrawals.length > 0 ? (
+                    {isLoading && sortedWithdrawals.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={4} className="text-center h-24">
+                                <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                            </TableCell>
+                        </TableRow>
+                    ) : sortedWithdrawals.length > 0 ? (
                         sortedWithdrawals.map((req) => (
-                            <TableRow key={req.id}>
-                                <TableCell className="font-medium">{req.date.toLocaleDateString()}</TableCell>
+                            <TableRow key={req._id}>
+                                <TableCell className="font-medium">{formatDate(req.createdOn)}</TableCell>
                                 <TableCell className="text-right">₹{req.amount.toFixed(2)}</TableCell>
                                 <TableCell className="text-center">
                                     <WithdrawalStatusBadge status={req.status} />

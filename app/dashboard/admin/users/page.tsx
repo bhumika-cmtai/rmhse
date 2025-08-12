@@ -32,102 +32,116 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Loader2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, Eye, Users as UsersIcon } from "lucide-react";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from "@/components/ui/pagination";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { DeleteConfirmationModal } from "@/app/components/ui/delete-confirmation-modal";
-import { staticUsers, User } from "../data";
+import { DeleteConfirmationModal } from "@/app/components/ui/delete-confirmation-modal"; // Adjust path if needed
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchUsers,
+  addUser,
+  updateUser,
+  deleteUser,
+  selectUsers,
+  selectLoading,
+  selectError,
+  selectPagination,
+  User
+} from "@/lib/redux/userSlice"; // Adjust path if needed
+import {updateUserProfile} from "@/lib/redux/authSlice"
+import { AppDispatch } from "@/lib/store"; // Adjust path if needed
+import axios from "axios";
+import Cookies from "js-cookie";
+import { assignRefferer, generateRoleId } from "@/lib/userActions";
 
+// Add dob to the User type in your slice if it's not already there
+// For example: export interface User { ...; dob?: string; }
+
+// List of user IDs that should be protected from deletion
+const protectedUserIds = [
+  "689196e09a69b409d03f86e8", "689197399a69b409d03f86eb", "68919d7ef1dedfbfd356fecc",
+  "68919e48f1dedfbfd356fed8", "68919eeff1dedfbfd356fedb", "6891a224d7169e1e22af1b29",
+  "6893b75941efc3a7afaf577b", "68940391362687a7140c4c7f", "689404c3362687a7140c4c85",
+  "6894053d362687a7140c4c8a", "689406be6513e46810ca48ae", "689407781df54db8eed4af74",
+  "689407b01df54db8eed4af79", "6894100d347fa8583c039093", "68997ec02c34f4a42de310c7"
+];
+
+// Initial state for the add/edit form, including dob
 const initialFormState: Omit<User, '_id' | 'createdOn'> = {
-  name: "",
-  email: "",
-  phoneNumber: "",
-  gender: "Male",
-  role: "div",
-  role_id: [],
-  income: 0,
-  status: "Active",
-  permanent_add: "",
-  current_add: "",
-  dob: "",
-  emergency_num: "",
-  referred_by: "",
+  name: "", email: "", phoneNumber: "", emergencyNumber: "", currentAddress: "",
+  permanentAddress: "", password: "", role: "user", status: "Active", income: 0,
+  account_number: "", Ifsc: "", upi_id: "", roleId: [], dob: "", // Added dob
 };
 
-// Helper function to check if a user is protected from deletion
-const isProtectedUser = (userId: string): boolean => {
-  const numericId = parseInt(userId, 10);
-  return !isNaN(numericId) && numericId >= 1 && numericId <= 17;
+// Type definition for the data received from the downline endpoint
+type DownlineUser = {
+  _id: string;
+  name: string;
+  phoneNumber: string;
+  status: string;
+  latestRoleId: string;
 };
 
 export default function Users() {
-  const [allUsers, setAllUsers] = useState<User[]>(staticUsers);
-  const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const users = useSelector(selectUsers);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const pagination = useSelector(selectPagination);
 
+  // State for filters and search
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  
+
+  // State for the Add/Edit modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [form, setForm] = useState(initialFormState);
+  const [form, setForm] = useState<Omit<User, '_id' | 'createdOn'>>(initialFormState);
   const [formLoading, setFormLoading] = useState(false);
-  
+
+  // State for the Delete modal
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const ITEMS_PER_PAGE = 10;
+  // State for the Downline modal
+  const [isDownlineModalOpen, setIsDownlineModalOpen] = useState(false);
+  const [downlineUsers, setDownlineUsers] = useState<DownlineUser[]>([]);
+  const [downlineLoading, setDownlineLoading] = useState(false);
+  const [viewingUser, setViewingUser] = useState<User | null>(null);
 
+  // Fetch users when filters or page change
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1);
-    }, 500);
+    const params: any = { page: pagination.currentPage, role: roleFilter, status };
+    if (debouncedSearch) params.search = debouncedSearch;
+    dispatch(fetchUsers(params));
+  }, [dispatch, debouncedSearch, status, roleFilter, pagination.currentPage]);
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(search), 500);
     return () => clearTimeout(handler);
   }, [search]);
 
+  // Show toast on API errors
   useEffect(() => {
-    setLoading(true);
-    const filteredUsers = allUsers.filter(user => {
-      const searchLower = debouncedSearch.toLowerCase();
-      const matchesSearch = (
-          user.name.toLowerCase().includes(searchLower) ||
-          user.email.toLowerCase().includes(searchLower) ||
-          user.phoneNumber.includes(searchLower) ||
-          user.role_id[0]?.toLowerCase().includes(searchLower)
-      );
-      const matchesStatus = status === 'all' || user.status === status;
-      const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-      return matchesSearch && matchesStatus && matchesRole;
-    });
-    setTotalPages(Math.ceil(filteredUsers.length / ITEMS_PER_PAGE));
-    const paginatedUsers = filteredUsers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-    setDisplayedUsers(paginatedUsers);
-    setLoading(false);
-  }, [allUsers, debouncedSearch, status, roleFilter, page]);
+    if (error) toast.error(error);
+  }, [error]);
 
-
-  const handleStatusChange = useCallback((val: string) => {
-    setStatus(val);
-    setPage(1);
-  }, []);
-  
-  const handleRoleChange = useCallback((val: string) => {
-    setRoleFilter(val);
-    setPage(1);
-  }, []);
-
+  const handleStatusChange = useCallback((val: string) => setStatus(val), []);
+  const handleRoleChange = useCallback((val: string) => setRoleFilter(val), []);
   const handlePageChange = useCallback((newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) return;
-    setPage(newPage);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [totalPages]);
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      dispatch({ type: 'users/setCurrentPage', payload: newPage });
+    }
+  }, [dispatch, pagination.totalPages]);
+
+  const refreshData = useCallback(() => {
+    dispatch(fetchUsers({ page: pagination.currentPage, role: roleFilter, status, search: debouncedSearch }));
+  }, [dispatch, pagination.currentPage, roleFilter, status, debouncedSearch]);
 
   const openAddModal = () => {
     setEditUser(null);
@@ -137,91 +151,125 @@ export default function Users() {
 
   const openEditModal = (user: User) => {
     setEditUser(user);
+    // Format date for input type="date"
+    const dobForInput = user.dob ? new Date(user.dob).toISOString().split('T')[0] : '';
     setForm({
-      name: user.name ?? '',
-      email: user.email ?? '',
-      phoneNumber: user.phoneNumber ?? '',
-      gender: user.gender ?? 'Male',
-      role: user.role ?? 'div',
-      role_id: user.role_id ?? [],
-      income: user.income ?? 0,
-      status: user.status ?? 'Active',
-      permanent_add: user.permanent_add ?? '',
-      current_add: user.current_add ?? '',
-      dob: user.dob ? user.dob.split('T')[0] : '',
-      emergency_num: user.emergency_num ?? '',
-      referred_by: user.referred_by ?? '',
+      name: user.name ?? '', email: user.email ?? '', phoneNumber: user.phoneNumber ?? '',
+      emergencyNumber: user.emergencyNumber ?? '', currentAddress: user.currentAddress ?? '',
+      permanentAddress: user.permanentAddress ?? '', password: '', role: user.role ?? 'user',
+      status: user.status ?? 'Active', income: user.income ?? 0, account_number: user.account_number ?? '',
+      Ifsc: user.Ifsc ?? '', upi_id: user.upi_id ?? '', roleId: user.roleId ?? [],
+      dob: dobForInput, // Use formatted date
     });
     setIsModalOpen(true);
   };
 
   const handleFormChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm(prevForm => ({...prevForm, [name]: name === 'income' ? (value === '' ? 0 : Number(value)) : value}));
-  };
-  
-  const handleFormSelectChange = (fieldName: string, value: string) => {
-    setForm(prevForm => ({ ...prevForm, [fieldName]: value as any }));
+    setForm(prev => ({ ...prev, [name]: name === 'income' ? (value === '' ? 0 : Number(value)) : value }));
   };
 
-  // --- NEW FUNCTION TO MATCH DIVISION.TSX ---
-  const handleStatusToggle = () => {
-    setForm(prevForm => ({
-        ...prevForm,
-        status: prevForm.status === 'Active' ? 'Block' : 'Active'
-    }));
+  const handleFormSelectChange = (fieldName: string, value: string) => {
+    setForm(prev => ({ ...prev, [fieldName]: value as any }));
   };
-  
+
   const handleFormSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
     try {
-      if (editUser && editUser._id) {
-        const updatedUser = { ...editUser, ...form };
-        const updatedUsers = allUsers.map(u => u._id === editUser._id ? updatedUser : u);
-        setAllUsers(updatedUsers);
+      if (editUser?._id) {
+        await dispatch(updateUser(editUser._id, form) as any);
+        
         toast.success("User updated successfully!");
       } else {
-        const newUser: User = {
-          _id: (allUsers.length + 1).toString() + new Date().getTime(),
+        // --- Add New User Logic (with new referral assignment) ---
+        let refferedBy = 'admin123'; // Default for top-level roles
+
+        // Assign referrer based on the role being created
+        switch (form.role) {
+            case 'MEM':
+                refferedBy = await assignRefferer('DIV');
+                break;
+            case 'DIV':
+                refferedBy = await assignRefferer('DIST');
+                break;
+            case 'DIST':
+                refferedBy = await assignRefferer('STAT');
+                break;
+            case 'STAT':
+                refferedBy = await assignRefferer('BM')
+            //  BM fall through to the default 'admin123'
+        }
+
+        // Generate the new user's first roleId
+        const newRoleId = generateRoleId(form.role!);
+
+        // Construct the final payload for the new user
+        const payload = {
           ...form,
-          role_id: [form.role_id[0] || ''], 
-          createdOn: new Date().toISOString()
+          refferedBy,
+          roleId: [newRoleId], // Initialize the roleId array
         };
-        setAllUsers(prevUsers => [newUser, ...prevUsers]);
+        
+        await dispatch(addUser(payload));
         toast.success("User added successfully!");
       }
+      
       setIsModalOpen(false);
+      refreshData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save user");
     } finally {
       setFormLoading(false);
     }
   };
 
   const openDeleteModal = (user: User) => {
+    if (user._id && protectedUserIds.includes(user._id)) {
+      toast.warning("This user is protected and cannot be deleted.");
+      return;
+    }
     setUserToDelete(user);
     setIsDeleteModalOpen(true);
   };
-  
+
   const handleConfirmDelete = async () => {
-    if (!userToDelete) return;
-
-    if (isProtectedUser(userToDelete._id)) {
-        toast.error("This user cannot be deleted.");
-        setIsDeleteModalOpen(false);
-        return;
-    }
-
+    if (!userToDelete?._id) return;
     setDeleteLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
     try {
-      setAllUsers(prev => prev.filter(u => u._id !== userToDelete._id));
+      await dispatch(deleteUser(userToDelete._id) as any).unwrap();
       toast.success(`User "${userToDelete.name}" deleted successfully.`);
       setIsDeleteModalOpen(false);
       setUserToDelete(null);
-      if (displayedUsers.length === 1 && page > 1) setPage(page - 1);
+      refreshData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete user");
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleViewDownline = async (user: User) => {
+    if (!user._id) return;
+    setViewingUser(user);
+    setIsDownlineModalOpen(true);
+    setDownlineLoading(true);
+    setDownlineUsers([]);
+    try {
+      const token = Cookies.get('auth-token');
+      if (!token) throw new Error("Authentication session has expired.");
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/downline/${user._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.data) {
+        setDownlineUsers(response.data.data);
+      } else {
+        throw new Error(response.data.message || "Failed to fetch downline.");
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || error.message);
+    } finally {
+      setDownlineLoading(false);
     }
   };
 
@@ -231,131 +279,140 @@ export default function Users() {
         <h1 className="text-4xl font-bold shrink-0">User List</h1>
         <div className="flex flex-wrap justify-end gap-2 w-full">
           <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="flex-grow sm:flex-grow-0 sm:w-48"/>
-          <Select value={roleFilter} onValueChange={handleRoleChange}><SelectTrigger className="w-full sm:w-40"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All Roles</SelectItem><SelectItem value="div">Division</SelectItem><SelectItem value="dist">District</SelectItem><SelectItem value="stat">State</SelectItem><SelectItem value="bm">Board Member</SelectItem></SelectContent></Select>
+          <Select value={roleFilter} onValueChange={handleRoleChange}><SelectTrigger className="w-full sm:w-40"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All Roles</SelectItem><SelectItem value="MEM">MEMBER</SelectItem><SelectItem value="DIV">DIV</SelectItem><SelectItem value="DIST">DIST</SelectItem><SelectItem value="STAT">STAT</SelectItem><SelectItem value="BM">BM</SelectItem></SelectContent></Select>
           <Select value={status} onValueChange={handleStatusChange}><SelectTrigger className="w-full sm:w-32"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="Active">Active</SelectItem><SelectItem value="Block">Block</SelectItem></SelectContent></Select>
           <Button size="sm" className="gap-1" onClick={openAddModal}><Plus className="w-4 h-4"/> Add User</Button>
         </div>
       </div>
+      
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto"><Table>
-            <TableHeader><TableRow>
-                <TableHead className="w-16">S. No.</TableHead><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone No.</TableHead><TableHead>Role ID</TableHead><TableHead>Status</TableHead><TableHead>Income</TableHead><TableHead>Actions</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {loading ? ( <TableRow><TableCell colSpan={8} className="text-center py-8"><div className="flex justify-center items-center gap-2"><Loader2 className="h-6 w-6 animate-spin" /><span>Loading users...</span></div></TableCell></TableRow>
-              ) : displayedUsers.length === 0 ? ( <TableRow><TableCell colSpan={8} className="text-center py-8">{debouncedSearch || status !== "all" || roleFilter !== "all" ? "No users found for the current filters." : "No users found."}</TableCell></TableRow>
-              ) : ( displayedUsers.map((user: User, idx: number) => {
-                    const protectedUser = isProtectedUser(user._id);
-                    return (
-                        <TableRow key={user._id}>
-                        <TableCell>{(page - 1) * ITEMS_PER_PAGE + idx + 1}</TableCell>
-                        <TableCell><div className="flex items-center gap-3"><Avatar><AvatarFallback>{user.name?.[0]?.toUpperCase()}</AvatarFallback></Avatar><span className="font-medium">{user.name}</span></div></TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.phoneNumber}</TableCell>
-                        <TableCell>{user.role_id[0] || '-'}</TableCell>
-                        <TableCell><Badge variant={user.status === 'Block' ? "destructive" : "default"}>{user.status}</Badge></TableCell>
-                        <TableCell>₹{user.income.toLocaleString()}</TableCell>
-                        <TableCell><div className="flex gap-2">
-                            <Button asChild size="icon" variant="ghost" title="View">
-                                <Link href={`/dashboard/admin/user/${user._id}`}>
-                                    <Eye className="w-4 h-4 text-blue-600" />
-                                </Link>
-                            </Button>
-                            
-                            <Button size="icon" variant="ghost" onClick={() => openEditModal(user)} title="Edit"><Edit className="w-4 h-4" /></Button>
-                            {!protectedUser &&
-                            <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                onClick={() => openDeleteModal(user)} 
-                                title="Delete"
-                            >
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>}
-                        </div></TableCell>
-                        </TableRow>
-                    )
-              }))}
-            </TableBody>
-          </Table></div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead className="w-16">S.No.</TableHead><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Income</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {loading ? <TableRow><TableCell colSpan={8} className="text-center py-8"><div className="flex justify-center items-center gap-2"><Loader2 className="h-6 w-6 animate-spin" /><span>Loading...</span></div></TableCell></TableRow> :
+                 users.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center py-8">No users found.</TableCell></TableRow> :
+                 users.map((user, idx) => (
+                    <TableRow key={user._id}>
+                      <TableCell>{(pagination.currentPage - 1) * 15 + idx + 1}</TableCell>
+                      <TableCell><div className="flex items-center gap-3"><Avatar><AvatarFallback>{user.name?.[0]?.toUpperCase()}</AvatarFallback></Avatar><span className="font-medium">{user.name}</span></div></TableCell>
+                      <TableCell>{user.email}</TableCell><TableCell>{user.phoneNumber}</TableCell>
+                      <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
+                      <TableCell><Badge variant={user.status === 'Block' ? "destructive" : "default"}>{user.status}</Badge></TableCell>
+                      <TableCell>₹{user.income?.toLocaleString() || '0'}</TableCell>
+                      <TableCell><div className="flex gap-1">
+                        <Button asChild size="icon" variant="ghost" title="View Details"><Link href={`/dashboard/admin/user/${user._id}`}><Eye className="w-4 h-4 text-blue-600" /></Link></Button>
+                        <Button size="icon" variant="ghost" onClick={() => handleViewDownline(user)} title="View Downline"><UsersIcon className="w-4 h-4 text-green-600" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => openEditModal(user)} title="Edit"><Edit className="w-4 h-4" /></Button>
+                        {user._id && !protectedUserIds.includes(user._id) && <Button size="icon" variant="ghost" onClick={() => openDeleteModal(user)} title="Delete"><Trash2 className="w-4 h-4 text-red-500" /></Button>}
+                      </div></TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
-      {!loading && totalPages > 1 && (
-        <div className="mt-4"><Pagination>
-            <PaginationContent>
-              <PaginationItem className={page === 1 ? "pointer-events-none opacity-50" : ""}><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); handlePageChange(page - 1); }} /></PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (<PaginationItem key={pageNum}><PaginationLink href="#" isActive={page === pageNum} onClick={(e) => { e.preventDefault(); handlePageChange(pageNum); }}>{pageNum}</PaginationLink></PaginationItem>))}
-              <PaginationItem className={page === totalPages ? "pointer-events-none opacity-50" : ""}><PaginationNext href="#" onClick={(e) => { e.preventDefault(); handlePageChange(page + 1); }} /></PaginationItem>
-            </PaginationContent>
-        </Pagination></div>
-      )}
+      {!loading && pagination.totalPages > 1 && <div className="mt-4"><Pagination><PaginationContent>
+        <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); handlePageChange(pagination.currentPage - 1); }} className={pagination.currentPage === 1 ? "pointer-events-none opacity-50" : ""} /></PaginationItem>
+        {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(pageNum => (
+          <PaginationItem key={pageNum}><PaginationLink href="#" isActive={pagination.currentPage === pageNum} onClick={(e) => { e.preventDefault(); handlePageChange(pageNum); }}>{pageNum}</PaginationLink></PaginationItem>
+        ))}
+        <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); handlePageChange(pagination.currentPage + 1); }} className={pagination.currentPage === pagination.totalPages ? "pointer-events-none opacity-50" : ""} /></PaginationItem>
+      </PaginationContent></Pagination></div>}
 
-      {/* --- ADD/EDIT DIALOG --- */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[800px]">
-          <DialogHeader><DialogTitle>{editUser ? 'Edit User' : 'Add New User'}</DialogTitle><DialogDescription>{editUser ? 'Update the details for this user.' : 'Fill in the details to create a new user.'}</DialogDescription></DialogHeader>
+        <DialogContent className="sm:max-w-[800px]"><DialogHeader><DialogTitle>{editUser ? 'Edit User' : 'Add New User'}</DialogTitle><DialogDescription>{editUser ? 'Update user details.' : 'Fill in details for a new user.'}</DialogDescription></DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4 mt-2 max-h-[70vh] overflow-y-auto pr-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label htmlFor="name">Name*</Label><Input id="name" name="name" value={form.name} onChange={handleFormChange} required /></div>
-                <div className="space-y-2"><Label htmlFor="email">Email*</Label><Input id="email" name="email" type="email" value={form.email} onChange={handleFormChange} required/></div>
-                <div className="space-y-2"><Label htmlFor="phoneNumber">Phone Number*</Label><Input id="phoneNumber" name="phoneNumber" value={form.phoneNumber} onChange={handleFormChange} required /></div>
-                <div className="space-y-2"><Label htmlFor="emergency_num">Emergency Number</Label><Input id="emergency_num" name="emergency_num" value={form.emergency_num} onChange={handleFormChange}/></div>
-                <div className="space-y-2"><Label htmlFor="dob">Date of Birth</Label><Input id="dob" name="dob" type="date" value={form.dob} onChange={handleFormChange}/></div>
-                <div className="space-y-2"><Label htmlFor="gender">Gender</Label><Select value={form.gender} onValueChange={(value) => handleFormSelectChange('gender', value)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent></Select></div>
-                <div className="space-y-2"><Label htmlFor="role">Role*</Label><Select value={form.role} onValueChange={(value) => handleFormSelectChange('role', value)} required><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="div">Division</SelectItem><SelectItem value="dist">District</SelectItem><SelectItem value="stat">State</SelectItem><SelectItem value="bm">Board Member</SelectItem></SelectContent></Select></div>
-                <div className="space-y-2"><Label htmlFor="role_id">Primary Role ID*</Label><Input id="role_id" name="role_id" placeholder="e.g., DIV001" value={form.role_id[0] || ''} onChange={(e) => setForm(f => ({...f, role_id: [e.target.value]}))} required /></div>
-                <div className="space-y-2"><Label htmlFor="income">Income</Label><Input id="income" name="income" type="number" value={form.income || ''} onChange={handleFormChange}/></div>
-                
-                {/* --- START OF MODIFIED STATUS FIELD --- */}
-                {/* Conditionally render status field based on edit mode */}
-                {editUser ? (
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <div><Badge variant={form.status === 'Block' ? 'destructive' : 'default'}>{form.status}</Badge></div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select value={form.status} onValueChange={(value) => handleFormSelectChange('status', value)}>
-                      <SelectTrigger><SelectValue/></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Block">Block</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                {/* --- END OF MODIFIED STATUS FIELD --- */}
-
-                <div className="space-y-2 md:col-span-2"><Label htmlFor="referred_by">Referred By</Label><Input id="referred_by" name="referred_by" placeholder="Referrer's Role ID" value={form.referred_by} onChange={handleFormChange}/></div>
-                <div className="space-y-2"><Label htmlFor="current_add">Current Address</Label><Textarea id="current_add" name="current_add" value={form.current_add} onChange={handleFormChange}/></div>
-                <div className="space-y-2"><Label htmlFor="permanent_add">Permanent Address</Label><Textarea id="permanent_add" name="permanent_add" value={form.permanent_add} onChange={handleFormChange}/></div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" name="name" value={form.name} onChange={handleFormChange} placeholder="Full Name" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" name="email" type="email" value={form.email} onChange={handleFormChange} placeholder="example@email.com" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input id="phoneNumber" name="phoneNumber" value={form.phoneNumber} onChange={handleFormChange} placeholder="10-digit mobile number" required />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="dob">Date of Birth</Label>
+                <Input id="dob" name="dob" type="date" value={form.dob} onChange={handleFormChange} />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select name="role" value={form.role} onValueChange={(value) => handleFormSelectChange('role', value)}>
+                  <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="DIV">DIV</SelectItem>
+                    <SelectItem value="DIST">DIST</SelectItem>
+                    <SelectItem value="STAT">STAT</SelectItem>
+                    <SelectItem value="BM">BM</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select name="status" value={form.status} onValueChange={(value) => handleFormSelectChange('status', value)}>
+                  <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Block">Block</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+               <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="currentAddress">Current Address</Label>
+                <Textarea id="currentAddress" name="currentAddress" value={form.currentAddress} onChange={handleFormChange} placeholder="Enter current address" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="permanentAddress">Permanent Address</Label>
+                <Textarea id="permanentAddress" name="permanentAddress" value={form.permanentAddress} onChange={handleFormChange} placeholder="Enter permanent address" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" name="password" type="password" value={form.password} onChange={handleFormChange} placeholder={editUser ? "Leave blank to keep current password" : "Create a password"} required={!editUser} />
+              </div>
             </div>
-
-            {/* --- MODIFIED DIALOG FOOTER --- */}
-            <DialogFooter className="pt-4">
-              {/* Add the status toggle button only in edit mode */}
-              {editUser && (
-                <Button 
-                  type="button" 
-                  variant={form.status === 'Active' ? 'destructive' : 'secondary'} 
-                  onClick={handleStatusToggle} 
-                  disabled={formLoading} 
-                  className="mr-auto"
-                >
-                  {form.status === 'Active' ? 'Block User' : 'Activate User'}
-                </Button>
-              )}
-              <DialogClose asChild><Button type="button" variant="outline" disabled={formLoading}>Cancel</Button></DialogClose>
-              <Button type="submit" disabled={formLoading}>{formLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}{formLoading ? 'Saving...' : (editUser ? 'Update User' : 'Add User')}</Button>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button type="submit" disabled={formLoading}>
+                {formLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please wait</> : 'Save Changes'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
       
-      <DeleteConfirmationModal open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} title="Delete User" description={`Are you sure you want to delete the user "${userToDelete?.name}"? This action cannot be undone.`} onConfirm={handleConfirmDelete} isDeleting={deleteLoading} confirmButtonText="Delete User" />
+      <DeleteConfirmationModal open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} title="Delete User" description={`Are you sure you want to delete "${userToDelete?.name}"? This cannot be undone.`} onConfirm={handleConfirmDelete} isDeleting={deleteLoading} />
+      
+      <Dialog open={isDownlineModalOpen} onOpenChange={setIsDownlineModalOpen}>
+        <DialogContent className="sm:max-w-4xl"><DialogHeader><DialogTitle>Downline for: <span className="text-primary">{viewingUser?.name}</span></DialogTitle><DialogDescription>List of users directly referred by {viewingUser?.name}.</DialogDescription></DialogHeader>
+          <div className="mt-4 max-h-[60vh] overflow-y-auto">
+            {downlineLoading ? <div className="flex justify-center items-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> :
+             downlineUsers.length === 0 ? <div className="text-center py-16 text-muted-foreground">This user has no referrals.</div> :
+             <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Phone</TableHead><TableHead>Status</TableHead><TableHead>Latest Role ID</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {downlineUsers.map((downlineUser) => (
+                  <TableRow key={downlineUser._id}>
+                    <TableCell className="font-medium">{downlineUser.name}</TableCell><TableCell>{downlineUser.phoneNumber}</TableCell>
+                    <TableCell><Badge variant={downlineUser.status === 'Block' ? 'destructive' : 'default'}>{downlineUser.status}</Badge></TableCell>
+                    <TableCell className="font-mono text-xs">{downlineUser.latestRoleId}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>}
+          </div>
+          <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline">Close</Button></DialogClose></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

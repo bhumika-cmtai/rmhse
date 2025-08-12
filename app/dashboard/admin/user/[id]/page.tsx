@@ -2,12 +2,42 @@
 
 import React, { useState, useEffect } from "react";
 import Link from 'next/link';
+import { useDispatch, useSelector } from "react-redux";
+import { fetchUserById, clearSelectedUser, selectUserById, selectLoading, selectError } from "@/lib/redux/userSlice"; // Adjust path as necessary
+import { RootState } from "@/lib/store"; // Adjust path as necessary
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, User as UserIcon, FileText, Landmark, Loader2, KeyRound } from "lucide-react";
-import { staticUsers, User } from "../../data"; // Adjust path as necessary
+
+// The User interface should match the one in your slice
+interface User {
+    _id?: string;
+    name?: string;
+    email?: string;
+    phoneNumber?: string;
+    profileImage?: string; // Assuming these properties exist
+    role?: string;
+    role_id?: string[];
+    status?: string;
+    emergency_num?: string;
+    dob?: string;
+    gender?: string;
+    current_add?: string;
+    permanent_add?: string;
+    referred_by?: string;
+    createdOn: string;
+    pancard?: string;
+    adharFrontImage?: string;
+    adharBackImage?: string;
+    account_number?: string;
+    Ifsc?: string;
+    upi_id?: string;
+    income?: number;
+}
+
 
 // Helper component for text details
 const DetailItem = ({ label, value, children }: { label: string; value?: string | number | null; children?: React.ReactNode }) => (
@@ -41,17 +71,30 @@ const DocumentItem = ({ label, imageUrl, textValue }: { label: string; imageUrl?
 
 // The main export is a single Client Component.
 export default function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'personal' | 'official' | 'documents' | 'bank'>('personal');
+  
+  // --- Redux Integration ---
+  const dispatch = useDispatch();
+  const user = useSelector((state: RootState) => selectUserById(state));
+  const loading = useSelector((state: RootState) => selectLoading(state));
+  const error = useSelector((state: RootState) => selectError(state));
+  // --- End Redux Integration ---
 
+  // Resolve the server-side params promise
   const resolvedParams = React.use(params);
-
+  // console.log("user", user)
   useEffect(() => {
-    const foundUser = staticUsers.find(u => u._id === resolvedParams.id) || null;
-    setUser(foundUser);
-    setLoading(false);
-  }, [resolvedParams.id]);
+    if (resolvedParams.id) {
+      // Dispatch the action to fetch the user by their ID
+      dispatch(fetchUserById(resolvedParams.id) as any);
+    }
+    console.log(user, "user")
+    // Cleanup function: runs when the component unmounts
+    return () => {
+      // Clear the selected user from the store to avoid showing stale data
+      dispatch(clearSelectedUser());
+    };
+  }, [dispatch, resolvedParams.id]);
 
   if (loading) {
     return (
@@ -62,11 +105,12 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  if (!user) {
+  // Handle both error state and the case where the user is not found
+  if (error || !user) {
     return (
       <div className="text-center h-screen flex flex-col justify-center items-center">
-        <h1 className="text-2xl font-bold mb-4">User Not Found</h1>
-        <p className="text-muted-foreground mb-6">The user you are looking for does not exist.</p>
+        <h1 className="text-2xl font-bold mb-4">{error ? "An Error Occurred" : "User Not Found"}</h1>
+        <p className="text-muted-foreground mb-6">{error || "The user you are looking for does not exist."}</p>
         <Link href="/dashboard/admin/users" passHref>
             <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4"/>Back to User List</Button>
         </Link>
@@ -90,15 +134,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
       <Card>
         <CardHeader className="flex flex-col sm:flex-row items-start gap-4">
             <Avatar className="w-24 h-24 border-2 border-primary">
-                <AvatarImage src={user.profileImage} alt={user.name} />
+                <AvatarImage src={user.profileImage} alt={user.name || ''} />
                 <AvatarFallback className="text-3xl">
-                    {user.name.split(' ').map(n => n[0]).join('')}
+                    {user.name ? user.name.split(' ').map(n => n[0]).join('') : ''}
                 </AvatarFallback>
             </Avatar>
             <div className="flex-1">
                 <CardTitle className="text-3xl">{user.name}</CardTitle>
                 <CardDescription>
-                    {user.email} · Role ID: {user.role_id[0]}
+                    {user.email} · Role ID: {user.roleId?.[user.roleId.length - 1] || 'N/A'}
                 </CardDescription>
                 <div className="mt-2">
                     <Badge variant={user.status === "Block" ? "destructive" : "default"}>{user.status}</Badge>
@@ -130,37 +174,37 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
                 <DetailItem label="Email" value={user.email} />
                 <DetailItem label="Password" value="••••••••" />
                 <DetailItem label="Phone Number" value={user.phoneNumber} />
-                <DetailItem label="Emergency Number" value={user.emergency_num} />
+                <DetailItem label="Emergency Number" value={user.emergencyNumber} />
                 <DetailItem label="Date of Birth" value={user.dob ? new Date(user.dob).toLocaleDateString() : "-"} />
                 <DetailItem label="Gender" value={user.gender} />
-                <DetailItem label="Current Address" value={user.current_add} />
-                <DetailItem label="Permanent Address" value={user.permanent_add} />
+                <DetailItem label="Current Address" value={user.currentAddress} />
+                <DetailItem label="Permanent Address" value={user.permanentAddress} />
               </div>
             )}
 
             {activeTab === 'official' && (
               <div>
                 <DetailItem label="Role"><span className="capitalize">{user.role}</span></DetailItem>
-                <DetailItem label="Primary Role ID" value={user.role_id[0]} />
-                <DetailItem label="All Assigned Role IDs" value={user.role_id.join(', ')} />
-                <DetailItem label="Referred By" value={user.referred_by} />
+                <DetailItem label="Primary Role ID" value={user.roleId?.[0]} />
+                <DetailItem label="All Assigned Role IDs" value={user.roleId?.join(', ')} />
+                <DetailItem label="Referred By" value={user.refferedBy} />
                 <DetailItem label="Status"><Badge variant={user.status === "Block" ? "destructive" : "default"}>{user.status}</Badge></DetailItem>
-                <DetailItem label="Joined On" value={new Date(user.createdOn).toLocaleString()} />
+                <DetailItem label="Joined On" value={user.createdOn ? new Date(user.createdOn).toLocaleString() : "-"} />
               </div>
             )}
             
             {activeTab === 'documents' && (
               <div>
                 <DocumentItem label="PAN Card" imageUrl={user.pancard}/>
-                <DocumentItem label="Aadhaar Card (Front)" imageUrl={user.adharFrontImage} />
-                <DocumentItem label="Aadhaar Card (Back)" imageUrl={user.adharBackImage} />
+                <DocumentItem label="Aadhaar Card (Front)" imageUrl={user.adharFront} />
+                <DocumentItem label="Aadhaar Card (Back)" imageUrl={user.adharBack} />
               </div>
             )}
 
             {activeTab === 'bank' && (
               <div>
                 <DetailItem label="Account Number" value={user.account_number} />
-                <DetailItem label="IFSC Code" value={user.ifsc_code} />
+                <DetailItem label="IFSC Code" value={user.Ifsc} />
                 <DetailItem label="UPI ID" value={user.upi_id} />
                 <DetailItem label="Income" value={`₹${user.income?.toLocaleString() || 0}`} />
               </div>

@@ -9,30 +9,20 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit, Info } from "lucide-react";
+import { Edit, Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useDispatch, useSelector } from "react-redux";
+import { 
+  getAllWithdrawals, 
+  updateWithdrawal, 
+  selectWithdrawals, 
+  selectWithdrawalLoading, 
+  selectWithdrawalError,
+  Withdrawal 
+} from "@/lib/redux/withdrawalSlice";
+import { AppDispatch, RootState } from "@/lib/store";
 
-// Define a type for a single withdrawal request with updated fields
-type WithdrawRequest = {
-  id: string;
-  userName: string;
-  amount: string;
-  requestedAt: string;
-  status: 'Processing' | 'Pending' | 'Approved' | 'Rejected';
-  rejectionReason?: string; // Optional field for the reason
-};
-
-// Sample data with all possible statuses and a rejection reason
-const sampleWithdrawRequests: WithdrawRequest[] = [
-  { id: "WR001", userName: "Alice Johnson", amount: "500.00", requestedAt: "2024-07-28", status: "Pending" },
-  { id: "WR002", userName: "Bob Williams", amount: "1200.50", requestedAt: "2024-07-27", status: "Pending" },
-  { id: "WR003", userName: "Charlie Brown", amount: "75.25", requestedAt: "2024-07-26", status: "Approved" },
-  { id: "WR004", userName: "Diana Miller", amount: "2500.00", requestedAt: "2024-07-25", status: "Rejected", rejectionReason: "User account is currently under a standard security review. Please try again in 24-48 hours." },
-  { id: "WR005", userName: "Ethan Davis", amount: "300.00", requestedAt: "2024-07-24", status: "Approved" },
-  { id: "WR006", userName: "Fiona White", amount: "850.00", requestedAt: "2024-07-23", status: "Rejected", rejectionReason: "Insufficient account activity to process withdrawal." },
-];
-
-// --- Edit Request Modal Component ---
+// Edit Request Modal Component
 const EditRequestModal = ({
   open,
   onOpenChange,
@@ -41,27 +31,36 @@ const EditRequestModal = ({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  request: WithdrawRequest | null;
-  onUpdateRequest: (id: string, newStatus: WithdrawRequest['status'], reason?: string) => void;
+  request: Withdrawal | null;
+  onUpdateRequest: (id: string, newStatus: string, reason?: string) => void;
 }) => {
-  const [newStatus, setNewStatus] = useState<WithdrawRequest['status']>('Pending');
+  const [newStatus, setNewStatus] = useState<string>('pending');
   const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (request) {
       setNewStatus(request.status);
-      setReason(request.rejectionReason || "");
+      setReason(request.reason || "");
     }
   }, [request]);
 
   if (!request) return null;
 
-  const isRejecting = newStatus === 'Rejected';
+  const isRejecting = newStatus === 'rejected';
   const isSubmitDisabled = isRejecting && !reason.trim();
 
-  const handleSubmit = () => {
-    const finalReason = newStatus === 'Approved' ? undefined : reason;
-    onUpdateRequest(request.id, newStatus, finalReason);
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      const finalReason = newStatus === 'approved' ? undefined : reason;
+      await onUpdateRequest(request._id, newStatus, finalReason);
+      onOpenChange(false);
+    } catch (error) {
+      toast.error("Failed to update request");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -70,20 +69,21 @@ const EditRequestModal = ({
         <DialogHeader>
           <DialogTitle>Update Withdrawal Request</DialogTitle>
           <DialogDescription>
-            Manage the request for <span className="font-semibold">{request.userName}</span> of <span className="font-semibold">₹{request.amount}</span>.
+            Manage the request for amount <span className="font-semibold">₹{request.amount}</span>.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="status-select">Status</Label>
-            <Select value={newStatus} onValueChange={(value) => setNewStatus(value as WithdrawRequest['status'])}>
+            <Select value={newStatus} onValueChange={(value) => setNewStatus(value)}>
               <SelectTrigger id="status-select">
                 <SelectValue placeholder="Select a status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Approved">Approved</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -101,10 +101,19 @@ const EditRequestModal = ({
         </div>
         <DialogFooter className="sm:justify-end gap-2">
           <DialogClose asChild>
-            <Button type="button" variant="outline">Cancel</Button>
+            <Button type="button" variant="outline" disabled={loading}>
+              Cancel
+            </Button>
           </DialogClose>
-          <Button type="button" onClick={handleSubmit} disabled={isSubmitDisabled}>
-            Update Request
+          <Button type="button" onClick={handleSubmit} disabled={isSubmitDisabled || loading}>
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              "Update Request"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -112,7 +121,7 @@ const EditRequestModal = ({
   );
 };
 
-// --- Request Info Modal Component (Updated) ---
+// Request Info Modal Component
 const RequestInfoModal = ({
   open,
   onOpenChange,
@@ -120,9 +129,24 @@ const RequestInfoModal = ({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  request: WithdrawRequest | null;
+  request: Withdrawal | null;
 }) => {
   if (!request) return null;
+
+  const formatDate = (timestamp: string | number) => {
+    if (!timestamp) return 'N/A';
+    // Ensure the timestamp is a number before creating a Date
+    const numericTimestamp = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
+    if (isNaN(numericTimestamp)) {
+        return "Invalid Date";
+    }
+    return new Date(numericTimestamp).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -130,31 +154,39 @@ const RequestInfoModal = ({
         <DialogHeader>
           <DialogTitle>Request Details</DialogTitle>
           <DialogDescription>
-            Viewing details for the request from <span className="font-semibold">{request.userName}</span>.
+            Viewing details for withdrawal request.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          {/* Status Section (Always shows) */}
+          <div className="space-y-2">
+            <Label>Amount</Label>
+            <p className="text-lg font-semibold">₹{request.amount.toLocaleString()}</p>
+          </div>
+          
           <div className="space-y-2">
             <Label>Status</Label>
             <div>
               <Badge
                 variant={
-                  request.status === 'Approved' ? 'default' :
-                  request.status === 'Rejected' ? 'destructive' : 'secondary'
+                  request.status === 'approved' ? 'default' :
+                  request.status === 'rejected' ? 'destructive' : 'secondary'
                 }
               >
-                {request.status}
+                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
               </Badge>
             </div>
           </div>
 
-          {/* Reason Section (Only shows if rejected) */}
-          {request.status === 'Rejected' && (
+          <div className="space-y-2">
+            <Label>Requested At</Label>
+            <p className="text-sm">{formatDate(request.createdOn)}</p>
+          </div>
+
+          {request.status === 'rejected' && (
             <div className="space-y-2">
               <Label>Reason for Rejection</Label>
               <p className="text-sm font-medium p-3 bg-muted rounded-md border">
-                {request.rejectionReason || "No reason provided."}
+                {request.reason || "No reason provided."}
               </p>
             </div>
           )}
@@ -169,34 +201,67 @@ const RequestInfoModal = ({
   );
 };
 
-
 export default function WithdrawPage() {
-  const [withdrawals, setWithdrawals] = useState<WithdrawRequest[]>(sampleWithdrawRequests);
+  const dispatch = useDispatch<AppDispatch>();
+  const withdrawals = useSelector(selectWithdrawals);
+  const loading = useSelector(selectWithdrawalLoading);
+  const error = useSelector(selectWithdrawalError);
+  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [requestToEdit, setRequestToEdit] = useState<WithdrawRequest | null>(null);
+  const [requestToEdit, setRequestToEdit] = useState<Withdrawal | null>(null);
   
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
-  const [requestToShowInfo, setRequestToShowInfo] = useState<WithdrawRequest | null>(null);
+  const [requestToShowInfo, setRequestToShowInfo] = useState<Withdrawal | null>(null);
 
-  const handleOpenEditModal = (request: WithdrawRequest) => {
+  // Fetch withdrawals on component mount
+  useEffect(() => {
+    dispatch(getAllWithdrawals());
+  }, [dispatch]);
+
+  // Handle error display
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
+  const handleOpenEditModal = (request: Withdrawal) => {
     setRequestToEdit(request);
     setIsEditModalOpen(true);
   };
 
-  const handleOpenInfoModal = (request: WithdrawRequest) => {
+  const handleOpenInfoModal = (request: Withdrawal) => {
     setRequestToShowInfo(request);
     setIsInfoModalOpen(true);
   };
 
-  const handleUpdateRequest = (id: string, newStatus: WithdrawRequest['status'], reason?: string) => {
-    setWithdrawals(prev =>
-      prev.map(req =>
-        req.id === id ? { ...req, status: newStatus, rejectionReason: newStatus === 'Rejected' ? reason : undefined } : req
-      )
-    );
-    toast.success(`Request has been updated to "${newStatus}".`);
-    setIsEditModalOpen(false);
+  const handleUpdateRequest = async (id: string, newStatus: string, reason?: string) => {
+    try {
+      const result = await dispatch(updateWithdrawal(id, { status: newStatus, reason }) as any);
+      if (result) {
+        toast.success(`Request has been updated to "${newStatus}".`);
+        // Refresh the withdrawals list
+        dispatch(getAllWithdrawals());
+      }
+    } catch (error) {
+      toast.error("Failed to update request");
+    }
   };
+
+  const formatDate = (timestamp: string | number) => {
+    if (!timestamp) return 'N/A';
+    // Ensure the timestamp is a number before creating a Date
+    const numericTimestamp = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
+    if (isNaN(numericTimestamp)) {
+        return "Invalid Date";
+    }
+    return new Date(numericTimestamp).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
 
   return (
     <div className="w-full mx-auto mt-2">
@@ -219,48 +284,65 @@ export default function WithdrawPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {withdrawals.map((request, idx) => (
-                  <TableRow key={request.id}>
-                    <TableCell>{idx + 1}</TableCell>
-                    <TableCell className="font-medium">{request.userName}</TableCell>
-                    <TableCell>{`₹${request.amount}`}</TableCell>
-                    <TableCell>{request.requestedAt}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          request.status === 'Approved' ? 'default' :
-                          request.status === 'Rejected' ? 'destructive' : 'secondary'
-                        }
-                      >
-                        {request.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {/* Edit Button (Disabled if not pending) */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenEditModal(request)}
-                          disabled={request.status !== 'Pending'}
-                          title="Edit Request"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        
-                        {/* Info Button (Always shows) */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenInfoModal(request)}
-                          title="View Details"
-                        >
-                          <Info className="h-4 w-4" />
-                        </Button>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <div className="flex justify-center items-center gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <span>Loading withdrawal requests...</span>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : withdrawals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      No withdrawal requests found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  withdrawals.map((request, idx) => (
+                    <TableRow key={request._id}>
+                      <TableCell>{idx + 1}</TableCell>
+                      <TableCell className="font-medium">{request?.userId?.name}</TableCell>
+                      <TableCell>₹{request.amount.toLocaleString()}</TableCell>
+                      <TableCell>{formatDate(request.createdOn)}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            request.status === 'approved' ? 'default' :
+                            request.status === 'rejected' ? 'destructive' : 'secondary'
+                          }
+                        >
+                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* Edit Button (Disabled if not pending) */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenEditModal(request)}
+                            disabled={(request.status !== 'pending' && request.status !== 'processing') || !request.userId}
+                            title="Edit Request"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          
+                          {/* Info Button (Always shows) */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenInfoModal(request)}
+                            title="View Details"
+                          >
+                            <Info className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

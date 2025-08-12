@@ -7,183 +7,211 @@ import { Mail, User,Lock, Loader2, Calendar, Phone,  } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
+import { signup } from "@/lib/redux/authSlice";
+import { RootState } from "@/lib/store";
+import { generateRoleId,assignRefferer } from '@/lib/userActions';
 
-// Combined the components into one for a clean, page-level implementation.
 const SignupPage = () => {
   const router = useRouter();
+  const dispatch = useDispatch();
   
-  // --- All your existing logic is preserved ---
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { isLoading, error, isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    phoneNumber: "",
+    dob: ""
+  });
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      toast.success("Successfully signed up! Redirecting...");
+      router.push(`/upload-details`);
+    }
+  }, [isAuthenticated, user, router]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    
+    if (!formData.name || !formData.email || !formData.password || !formData.phoneNumber) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
 
-    const users = [
-      { email: "admin@gmail.com", password: "admin123", role: "admin" },
-      { email: "test@gmail.com", password: "test123", role: "user" },
-    ];
+    try {
+      // const referrerId = await assignRefferer();
+      // const newMemberId = generateMemberId();
 
-    const matchedUser = users.find(
-      (u) => u.email === email && u.password === password
-    );
+      const signupData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phoneNumber: formData.phoneNumber,
+        dob: formData.dob || undefined,
+        status: "block"
+        // memberId: newMemberId,
+        // refferedBy: referrerId,
+      };
+      
+      await dispatch(signup(signupData) as any);
 
-    // Using a timeout to simulate network delay
-    setTimeout(() => {
-      if (matchedUser) {
-        toast.success("Successfully logged in!");
-        setTimeout(() => {
-          if (matchedUser.role === "admin") {
-            router.push("/dashboard/admin");
-          } else {
-            router.push("/dashboard/user");
-          }
-        }, 1000);
-      } else {
-        toast.error("Invalid credentials");
-        setLoading(false);
-      }
-    }, 1000);
+    } catch (err: any) {
+      toast.error("Failed to signup please try again.");
+    }
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-yellow-100 px-4">
-      {/* --- UI has been completely updated to match the image --- */}
       <div className="w-full max-w-md p-8 sm:px-8 space-y-8 bg-gradient-to-br from-yellow-200/40 to-green-200/75 rounded-[20px] shadow-2xl">
         
-        {/* Header */}
         <div className="text-center">
           <h1 className="text-4xl font-bold text-pink-500">Sign up</h1>
         </div>
 
-        {/* Form */}
         <form className="space-y-6" onSubmit={handleSubmit}>
           
-          {/* Full Name Input */}
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-800" />
             <Input
               id="name"
+              name="name"
               type="text"
               placeholder="Full name"
               className="w-full pl-10 pr-4 py-5 bg-white border-[1px] border-black rounded-[12px]  focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
               style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.name}
+              onChange={handleInputChange}
               required
-              disabled={loading}
+              disabled={isLoading}
             />
           </div>
 
-
-          {/* Email Input */}
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-800" />
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="example@email.com"
               className="w-full pl-10 pr-4 py-5 bg-white border-[1px] border-black rounded-[12px] shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
               style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleInputChange}
               required
-              disabled={loading}
+              disabled={isLoading}
             />
           </div>
 
-          {/* Birth date Input */}
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-800" />
             <Input
               id="dob"
-              type="text"
+              name="dob"
+              type="date"
               placeholder="Birth Date"
               className="w-full pl-10 pr-4 py-5 bg-white border-[1px] border-black rounded-[12px] shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
               style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
+              value={formData.dob}
+              onChange={handleInputChange}
+              disabled={isLoading}
             />
           </div>
 
-          {/* Phone number Input */}
           <div className="relative">
             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-800" />
             <Input
               id="phoneNumber"
-              type="text"
+              name="phoneNumber"
+              type="tel"
               placeholder="Phone number"
               className="w-full pl-10 pr-4 py-5 bg-white border-[1px] border-black rounded-[12px] shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
               style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
               required
-              disabled={loading}
+              disabled={isLoading}
             />
           </div>
 
-          {/* Password Input */}
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-800" />
             <Input
               id="password"
+              name="password"
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               className="w-full pl-10 pr-16 py-5 bg-white border-[1px] border-black rounded-[12px] shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
               style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleInputChange}
               required
-              disabled={loading}
+              disabled={isLoading}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 hover:text-gray-700"
-              disabled={loading}
+              disabled={isLoading}
             >
               {showPassword ? "HIDE" : "SHOW"}
             </button>
           </div>
           
-          {/* Confirm Password Input */}
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-800" />
             <Input
-              id="confirm_password"
-              type={showPassword ? "text" : "password"}
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
               placeholder="Confirm Password"
               className="w-full pl-10 pr-16 py-5 bg-white border-[1px] border-black rounded-[12px] shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
               style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
               required
-              disabled={loading}
+              disabled={isLoading}
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 hover:text-gray-700"
-              disabled={loading}
+              disabled={isLoading}
             >
-              {showPassword ? "HIDE" : "SHOW"}
+              {showConfirmPassword ? "HIDE" : "SHOW"}
             </button>
           </div>
-
           
-          {/* Signup Button */}
           <Button
             type="submit"
             className="w-full py-5 font-semibold text-gray-800 bg-[#FDECB4] rounded-[10px] shadow-lg cursor-pointer hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition duration-300"
             style={{ boxShadow: '0 6px 4px 0 rgba(0, 0, 0, 0.25)' }}
-            disabled={loading}
+            disabled={isLoading}
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing up...
@@ -194,7 +222,6 @@ const SignupPage = () => {
           </Button>
         </form>
 
-        {/* Sign Up Link */}
         <div className="text-center">
           <p className="text-sm text-gray-800">
             Already have an account?{" "}

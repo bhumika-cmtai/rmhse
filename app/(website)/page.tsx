@@ -4,6 +4,8 @@ import AboutSection from './home/AboutUs';
 import Image from 'next/image';
 import WhyChooseUs from './home/WhyChooseUs';
 import OurProcess from './home/OurProcess';
+import LatestNotification from './home/LatestNotification';
+import ContactUs from './home/ContactUs';
 
 const Page = () => {
   return (
@@ -11,6 +13,7 @@ const Page = () => {
       <Hero />
       <OurProcess />
       <AboutSection />
+      <LatestNotification />
       <div className='flex justify-center items-center py-20'>
         <Image 
         src="/posterImg.jpg"
@@ -21,6 +24,7 @@ const Page = () => {
         />
       </div>
       <WhyChooseUs />
+      <ContactUs />
     </div>
   );
 };

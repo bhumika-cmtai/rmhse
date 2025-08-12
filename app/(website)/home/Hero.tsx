@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import React from 'react';
 import { motion } from "framer-motion";
+import Link from 'next/link';
  
 
 const Hero = () => {
@@ -79,10 +80,12 @@ const Hero = () => {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, delay: 1 }}
         >
-          <Button className="bg-white shadow-sm border-[1px] border-pink-500 px-8 py-3 md:px-[30px] md:py-[22px] rounded-[18px] font-bold text-base md:text-lg text-pink-500"
-            style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}>
+          <Link className="bg-white shadow-sm border-[1px] border-pink-500 px-8 py-3 md:px-[30px]  rounded-[18px] font-bold text-base md:text-lg text-pink-500 hover:bg-pink-500 hover:text-white"
+            style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
+            href="/signup"
+            >
             Join Us
-          </Button>
+          </Link>
         </motion.div>
                 
         {/* Trust Indicators */}
