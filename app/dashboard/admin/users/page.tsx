@@ -157,7 +157,7 @@ export default function Users() {
       name: user.name ?? '', email: user.email ?? '', phoneNumber: user.phoneNumber ?? '',
       emergencyNumber: user.emergencyNumber ?? '', currentAddress: user.currentAddress ?? '',
       permanentAddress: user.permanentAddress ?? '', password: '', role: user.role ?? 'user',
-      status: user.status ?? 'Active', income: user.income ?? 0, account_number: user.account_number ?? '',
+      status: user.status ?? 'active', income: user.income ?? 0, account_number: user.account_number ?? '',
       Ifsc: user.Ifsc ?? '', upi_id: user.upi_id ?? '', roleId: user.roleId ?? [],
       dob: dobForInput, // Use formatted date
     });
@@ -280,7 +280,7 @@ export default function Users() {
         <div className="flex flex-wrap justify-end gap-2 w-full">
           <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="flex-grow sm:flex-grow-0 sm:w-48"/>
           <Select value={roleFilter} onValueChange={handleRoleChange}><SelectTrigger className="w-full sm:w-40"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All Roles</SelectItem><SelectItem value="MEM">MEMBER</SelectItem><SelectItem value="DIV">DIV</SelectItem><SelectItem value="DIST">DIST</SelectItem><SelectItem value="STAT">STAT</SelectItem><SelectItem value="BM">BM</SelectItem></SelectContent></Select>
-          <Select value={status} onValueChange={handleStatusChange}><SelectTrigger className="w-full sm:w-32"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="Active">Active</SelectItem><SelectItem value="Block">Block</SelectItem></SelectContent></Select>
+          <Select value={status} onValueChange={handleStatusChange}><SelectTrigger className="w-full sm:w-32"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="Block">Block</SelectItem></SelectContent></Select>
           <Button size="sm" className="gap-1" onClick={openAddModal}><Plus className="w-4 h-4"/> Add User</Button>
         </div>
       </div>
