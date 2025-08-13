@@ -134,7 +134,23 @@ export default function Dashboard() {
         }
     }, [user?.role]);
 
-    const handleUpgrade = async () => { /* ... handleUpgrade logic remains the same ... */ };
+    const handleUpgrade = async () => {
+        setIsUpgrading(true);
+        toast.loading("Upgrading your role...");
+        try {
+            const resultAction = await dispatch(upgradeUserRole());
+            if (resultAction) {
+                toast.success(`Congratulations! You've been upgraded to ${resultAction.payload.role}.`);
+            } else {
+                toast.error(resultAction.payload as string || "Upgrade failed. Please contact support.");
+            }
+        } catch (error) {
+            toast.error("An unexpected error occurred during upgrade.");
+        }
+        setIsUpgrading(false);
+        toast.dismiss();
+    };
+    
     
     // Calculate the largest single commission earned
     const largestCommission = useMemo(() => 
@@ -151,8 +167,24 @@ export default function Dashboard() {
         return <div className="text-center p-12">Could not load user data. Please try refreshing.</div>;
     }
     
-    if (user.role === 'MEM') { /* ... MEM view remains the same ... */ }
-
+    if (user.role === 'MEM') {
+        // ... (JSX for MEM role remains the same)
+         return (
+            <div className="flex items-center justify-center rounded-lg border bg-card text-card-foreground shadow-sm p-12 min-h-[400px]">
+                <div className="text-center space-y-4">
+                    <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h2 className="text-2xl font-semibold">Unlock Your Earning Potential</h2>
+                    <p className="text-muted-foreground max-w-md">
+                        Upgrade your account to DIV to access detailed statistics, withdrawal trends, and start building your referral network.
+                    </p>
+                    <Button size="lg" variant="default" className="mt-4" onClick={handleUpgrade} disabled={isUpgrading}>
+                        {isUpgrading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ArrowUpCircle className="mr-2 h-5 w-5" />}
+                        {isUpgrading ? 'Upgrading...' : upgradeDetails.buttonText}
+                    </Button>
+                </div>
+            </div>
+        );
+    }
     const mainStats = [
         { name: "Total Referred Users", value: userStats.referredUsersCount.toLocaleString(), icon: Users },
         { name: "Total Income", value: `₹${userStats.personalIncome.toLocaleString()}`, icon: Banknote },

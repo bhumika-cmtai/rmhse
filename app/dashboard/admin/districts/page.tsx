@@ -298,9 +298,9 @@ export default function DivUsers() {
               <SelectItem value="Block">Block</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" className="gap-1" onClick={openAddModal}>
+          {/* <Button size="sm" className="gap-1" onClick={openAddModal}>
             <Plus className="w-4 h-4"/> Add DIST User
-          </Button>
+          </Button> */}
         </div>
       </div>
       
