@@ -89,18 +89,19 @@ const PaymentPage = () => {
 
               // --- NEW LOGIC AFTER SUCCESSFUL PAYMENT ---
               // 1. Generate the necessary IDs
-              const newRoleId = generateRoleId("MEM");
+              // const newRoleId = generateRoleId("MEM");
+              // //const joinId = 
               const referrerId = await assignRefferer("DIV");
-
+              console.log(referrerId)
               // 2. Call the new endpoint to activate the user
               const activationResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/activate-user`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   userId: userId,
-                  roleId: newRoleId,
-                  referredBy: referrerId,
-                  role: "active"
+                  // roleId: newRoleId,
+                  refferedBy: referrerId,
+                  status: "active"
                 }),
               });
 

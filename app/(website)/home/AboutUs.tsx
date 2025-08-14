@@ -44,7 +44,7 @@ const AboutSection = () => {
               // autoPlay={true}
               // loop // Good to add for background-style videos
               // muted // Required for autoplay in most modern browsers
-              className="rounded-[20px] shadow-xl w-[400px] h-[400px] md:w-[474px] md:h-[578.34px] object-cover"
+              className="rounded-[20px] shadow-xl w-[400px] h-[400px] md:w-[474px] md:h-[578.34px] object-contain"
               controls
             />
           </div>

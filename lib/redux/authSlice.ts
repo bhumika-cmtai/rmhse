@@ -10,11 +10,11 @@ export interface User {
   email: string;
   password?: string; // Should not be stored in frontend state, but good to have in type
   phoneNumber: string;
-  whatsappNumber?: string;
-  city?: string;
   profileImage?: string;
+  fatherName? : string;
   role: string;
   roleId?: string[];
+  joinId? :string;
   status: string;
   createdOn: string;
   updatedOn: string;
@@ -104,65 +104,49 @@ export const { setUser, setIsLoading, setError, logoutUser, setUsersCount } = au
 
 // --- MODIFICATION START ---
 // Updated login thunk to accept `rememberMe` and set the cookie directly.
-export const login = ({ email, password, rememberMe }: { email: string; password: string; rememberMe: boolean }) => async (dispatch: Dispatch) => {
-  dispatch(setIsLoading(true));
-  dispatch(setError(null));
-  try {
-    // console.log("Making login API call to:", `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`);
-    console.log("----this is auth login----")
-    console.log(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login}`)
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`, { email, password });
-    // console.log("Login API response:", response.data);
-    // console.log(response)
-    if (response.data) {
-      const { user, token } = response.data.data;
-      // console.log("Extracted user and token:", { user, token: token ? "present" : "missing" });
+export const login = ({ joinId, password, rememberMe }: { joinId: string; password: string; rememberMe: boolean }) => async (dispatch: Dispatch) => {
+  // --- MODIFICATION END ---
+    dispatch(setIsLoading(true));
+    dispatch(setError(null));
+    try {
+      // --- MODIFICATION START ---
+      // Send `joinId` in the request body
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`, { joinId, password });
+      // --- MODIFICATION END ---
       
-      if (user.status !== 'active') {
-        const errorMessage = "Your account is currently blocked or inactive. Please contact support.";
+      if (response.data) {
+        const { user, token } = response.data.data;
+        
+        if (user.status !== 'active') {
+          const errorMessage = "Your account is currently blocked or inactive. Please contact support.";
+          dispatch(setError(errorMessage));
+          return null;
+        }
+  
+        // Cookie logic remains the same
+        const cookieOptions: Cookies.CookieAttributes = { sameSite: 'lax' };
+        if (rememberMe) {
+          cookieOptions.expires = 30; 
+        }
+        
+        Cookies.set('auth-token', token, cookieOptions);
+        dispatch(setUser(user));
+        return user;
+      } else {
+        const errorMessage = response.data?.errorMessage || "Login failed.";
         dispatch(setError(errorMessage));
-        return null; // Stop the login process and signal failure
+        return null;
       }
-
-      // Set the cookie here inside the thunk for reliability
-      // 1. Define the base cookie options
-      const cookieOptions: Cookies.CookieAttributes = {
-        sameSite: 'lax',
-        // secure: process.env.NODE_ENV !== 'development' // Optional
-      };
-
-      // 2. Conditionally add the 'expires' property ONLY if rememberMe is true
-      if (rememberMe) {
-        // This now matches your backend's 30-day token expiration
-        cookieOptions.expires = 30; 
-      }
-      
-      // If rememberMe is false, 'expires' is NOT added, creating a session cookie
-      // that is deleted when the browser closes.
-
-      // 3. Set the cookie with the dynamic options
-      Cookies.set('auth-token', token, cookieOptions);
-      // console.log("Cookie set successfully");
-       
-      dispatch(setUser(user));
-      // console.log("User dispatched to Redux store");
-      return user; // Return the user object on success
-    } else {
-      const errorMessage = response.data?.errorMessage || "Login failed.";
-      // console.log("Login failed:", errorMessage);
-      dispatch(setError(errorMessage));
+    } catch (error: any) {
+      const message = error.response?.data?.message || error.message || "An unknown error occurred.";
+      dispatch(setError(message));
       return null;
-    }
-  } catch (error: any) {
-    const message = error.response?.data?.message || error.message || "An unknown error occurred.";
-    // console.log("Login error:", message);
-    dispatch(setError(message));
-    return null;
-  } 
-};
+    } 
+  };
+  
 
 // NEW: Signup thunk
-export const signup = (userData: { name: string; email: string; password: string; phoneNumber: string; dob?: string; status?: string;}) => async (dispatch: Dispatch) => {
+export const signup = (userData: { name: string; email: string; password: string; phoneNumber: string; dob?: string;fatherName?: string ;status?: string;}) => async (dispatch: Dispatch) => {
   dispatch(setIsLoading(true));
   dispatch(setError(null));
   console.log()
@@ -182,15 +166,17 @@ export const signup = (userData: { name: string; email: string; password: string
       dispatch(setUser(user));
       // console.log(user)
       return user;
-    } else {
-      const errorMessage = response.data?.errorMessage || "Signup failed.";
-      dispatch(setError("Failed to signup. Try again."));
+    }
+    else {
+      const errorMessage = response.data?.errorMessage || "Failed to signup. Try again.";
+      
+      dispatch(setError(errorMessage ));
       return null;
     }
   } catch (error: any) {
-    const message = error.response?.data?.message || error.message || "An unknown error occurred.";
+    const message = error.response?.data?.errorMessage || error.errorMessage || "An unknown error occurred.";
     // console.log(error)
-    dispatch(setError("Failed to signup. Try again."));
+    dispatch(setError(message));
     return null;
   }
 };
@@ -462,7 +448,7 @@ export const upgradeUserRole = () => async (dispatch: Dispatch) => {
     );
 
     // If the upgrade is successful, the backend returns the updated user object.
-    if (response.data && response.data.data) {
+    if (response.data ) {
       // Dispatch setUser to update the user state everywhere in the app.
       dispatch(setUser(response.data.data)); 
       // The setUser action automatically sets isLoading to false.

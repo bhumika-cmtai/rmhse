@@ -7,11 +7,12 @@ import {
     Banknote, 
     Briefcase,
     ArrowUpCircle, 
-    Loader2
+    Loader2,
+    ClipboardCopy // <-- NEW ICON for Join ID
 } from "lucide-react";
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps 
-} from 'recharts'; // <-- UPDATED IMPORTS
+} from 'recharts';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ import {
 } from "@/lib/redux/countSlice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// --- Custom Tooltip Component (Updated for Bar Chart) ---
+// --- Custom Tooltip Component (No changes) ---
 const CustomTooltip = (props: TooltipProps<ValueType, NameType>) => {
     const { active, label, payload } = props as { active?: boolean; label?: string; payload?: { value: number }[]; };
     if (active && payload && payload.length) {
@@ -51,24 +52,19 @@ const CustomTooltip = (props: TooltipProps<ValueType, NameType>) => {
     return null;
 };
 
-// --- NEW Bar Chart Component for Commission Sources ---
+// --- CommissionBarChart Component (No changes) ---
 const CommissionBarChart = ({ data }: { data: CommissionHistory[] }) => {
     const chartData = useMemo(() => {
         const totalsByUser: { [key: string]: number } = {};
-
         data.forEach(item => {
             const userName = item.sourceUserName || "Unknown User";
-            if (!totalsByUser[userName]) {
-                totalsByUser[userName] = 0;
-            }
+            if (!totalsByUser[userName]) { totalsByUser[userName] = 0; }
             totalsByUser[userName] += item.amount;
         });
-
         return Object.keys(totalsByUser)
             .map(userName => ({ name: userName, total: totalsByUser[userName] }))
-            .sort((a, b) => b.total - a.total); // Sort to show top earners first
+            .sort((a, b) => b.total - a.total);
     }, [data]);
-
     return (
         <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
@@ -82,23 +78,13 @@ const CommissionBarChart = ({ data }: { data: CommissionHistory[] }) => {
     );
 };
 
-// --- Loading Skeleton (No changes needed) ---
-const DashboardLoadingSkeleton = () => { /* ... JSX for skeleton remains the same ... */ 
+// --- Loading Skeleton (No changes) ---
+const DashboardLoadingSkeleton = () => { 
     return (
         <div className="space-y-8 animate-pulse">
-            <div><Skeleton className="h-8 w-48 mb-4" />
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {[1, 2, 3].map((i) => (<div key={i} className="rounded-lg border bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><Skeleton className="h-4 w-32" /><Skeleton className="mt-2 h-9 w-24" /></div><Skeleton className="h-12 w-12 rounded-full" /></div></div>))}
-                </div>
-            </div>
-             <div><Skeleton className="h-8 w-48 mb-4" />
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {[1, 2, 3].map((i) => (<div key={i} className="rounded-lg border bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><Skeleton className="h-4 w-32" /><Skeleton className="mt-2 h-9 w-24" /></div><Skeleton className="h-12 w-12 rounded-full" /></div></div>))}
-                </div>
-            </div>
-            <div><Skeleton className="h-8 w-48 mb-4" />
-                <div className="rounded-lg border bg-white p-4 shadow-sm"><Skeleton className="h-[300px] w-full" /></div>
-            </div>
+            <div><Skeleton className="h-8 w-48 mb-4" /><div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{[1, 2, 3].map((i) => (<div key={i} className="rounded-lg border bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><Skeleton className="h-4 w-32" /><Skeleton className="mt-2 h-9 w-24" /></div><Skeleton className="h-12 w-12 rounded-full" /></div></div>))}</div></div>
+            <div><Skeleton className="h-8 w-48 mb-4" /><div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{[1, 2, 3].map((i) => (<div key={i} className="rounded-lg border bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><Skeleton className="h-4 w-32" /><Skeleton className="mt-2 h-9 w-24" /></div><Skeleton className="h-12 w-12 rounded-full" /></div></div>))}</div></div>
+            <div><Skeleton className="h-8 w-48 mb-4" /><div className="rounded-lg border bg-white p-4 shadow-sm"><Skeleton className="h-[300px] w-full" /></div></div>
         </div>
     );
 };
@@ -115,9 +101,7 @@ export default function Dashboard() {
     const [isUpgrading, setIsUpgrading] = useState(false);
 
     useEffect(() => {
-        if (!user) {
-            dispatch(fetchCurrentUser());
-        }
+        if (!user) { dispatch(fetchCurrentUser()); }
         if (user?._id) {
             dispatch(fetchUserDashboardCounts(user._id));
             dispatch(getCommissionHistory(user._id));
@@ -135,48 +119,54 @@ export default function Dashboard() {
     }, [user?.role]);
 
     const handleUpgrade = async () => {
+        if (!user) {
+          toast.error("Cannot upgrade: User data is not loaded.");
+          return;
+        }
+        
+        const hasBankDetails = user.account_number && user.Ifsc;
+        const hasPanCard = !!user.pancard;
+
+        if (!hasBankDetails && !hasPanCard) {
+          toast.error("Please add your PAN Card or Bank Details before upgrading.", {
+            description: "Go to Settings to add your verification details.",
+            duration: 5000,
+          });
+          return;
+        }
+
         setIsUpgrading(true);
-        toast.loading("Upgrading your role...");
+        const toastId = toast.loading("Upgrading your role...");
         try {
             const resultAction = await dispatch(upgradeUserRole());
             if (resultAction) {
-                toast.success(`Congratulations! You've been upgraded to ${resultAction.payload.role}.`);
+                toast.success(`Congratulations! You've been upgraded to ${resultAction.payload.role}.`, { id: toastId });
             } else {
-                toast.error(resultAction.payload as string || "Upgrade failed. Please contact support.");
+                const errorMessage = (resultAction.payload as any)?.message || "Upgrade failed. Please contact support.";
+                toast.error(errorMessage, { id: toastId });
             }
         } catch (error) {
-            toast.error("An unexpected error occurred during upgrade.");
+            toast.error("An unexpected error occurred during upgrade.", { id: toastId });
+        } finally {
+            setIsUpgrading(false);
         }
-        setIsUpgrading(false);
-        toast.dismiss();
     };
     
-    
-    // Calculate the largest single commission earned
-    const largestCommission = useMemo(() => 
-        [...commissionHistory].sort((a, b) => b.amount - a.amount)[0],
-    [commissionHistory]);
+    // --- STEP 1: REMOVE UNNECESSARY LOGIC ---
+    // const largestCommission = useMemo(() => ...); // This line has been removed.
 
     const isLoading = (isAuthLoading || isCountsLoading) && !user;
 
-    if (isLoading) {
-        return <DashboardLoadingSkeleton />;
-    }
-
-    if (!user) {
-        return <div className="text-center p-12">Could not load user data. Please try refreshing.</div>;
-    }
+    if (isLoading) { return <DashboardLoadingSkeleton />; }
+    if (!user) { return <div className="text-center p-12">Could not load user data. Please try refreshing.</div>; }
     
     if (user.role === 'MEM') {
-        // ... (JSX for MEM role remains the same)
          return (
             <div className="flex items-center justify-center rounded-lg border bg-card text-card-foreground shadow-sm p-12 min-h-[400px]">
                 <div className="text-center space-y-4">
                     <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h2 className="text-2xl font-semibold">Unlock Your Earning Potential</h2>
-                    <p className="text-muted-foreground max-w-md">
-                        Upgrade your account to DIV to access detailed statistics, withdrawal trends, and start building your referral network.
-                    </p>
+                    <p className="text-muted-foreground max-w-md">Upgrade your account to DIV to access detailed statistics, withdrawal trends, and start building your referral network.</p>
                     <Button size="lg" variant="default" className="mt-4" onClick={handleUpgrade} disabled={isUpgrading}>
                         {isUpgrading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ArrowUpCircle className="mr-2 h-5 w-5" />}
                         {isUpgrading ? 'Upgrading...' : upgradeDetails.buttonText}
@@ -185,6 +175,7 @@ export default function Dashboard() {
             </div>
         );
     }
+
     const mainStats = [
         { name: "Total Referred Users", value: userStats.referredUsersCount.toLocaleString(), icon: Users },
         { name: "Total Income", value: `₹${userStats.personalIncome.toLocaleString()}`, icon: Banknote },
@@ -204,9 +195,7 @@ export default function Dashboard() {
             <div>
                 <h2 className="text-2xl font-semibold mb-4">Your Statistics</h2>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {mainStats.map((stat) => (
-                        <Card key={stat.name}><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">{stat.name}</CardTitle><stat.icon className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stat.value}</div></CardContent></Card>
-                    ))}
+                    {mainStats.map((stat) => (<Card key={stat.name}><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">{stat.name}</CardTitle><stat.icon className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stat.value}</div></CardContent></Card>))}
                 </div>
             </div>
 
@@ -215,15 +204,18 @@ export default function Dashboard() {
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Account Status</CardTitle></CardHeader><CardContent><Badge variant={user.status.toLowerCase() === 'active' ? 'default' : 'destructive'} className="text-base">{user.status}</Badge></CardContent></Card>
                     <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Current Role</CardTitle></CardHeader><CardContent><p className="text-xl font-semibold">{user.role}</p></CardContent></Card>
+                    
+                    {/* =================================================================================== */}
+                    {/* STEP 2: REPLACE THE CARD WITH THE JOIN ID CARD                                    */}
+                    {/* =================================================================================== */}
                     <Card>
-                        <CardHeader className="pb-2"><CardTitle className="text-sm">Largest Commission Earned</CardTitle></CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium">My Join ID</CardTitle>
+                            <ClipboardCopy className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
                         <CardContent>
-                            {largestCommission ? (
-                                <>
-                                <p className="text-xl font-semibold">₹{largestCommission.amount.toLocaleString()}</p>
-                                <p className="text-xs text-muted-foreground">from {largestCommission.sourceUserName}</p>
-                                </>
-                            ) : (<p className="text-sm text-muted-foreground">No commissions earned yet.</p>)}
+                            <p className="text-xl font-semibold">{user.joinId || 'Not Assigned'}</p>
+                            <p className="text-xs text-muted-foreground">Use this ID for login.</p>
                         </CardContent>
                     </Card>
                 </div>

@@ -29,8 +29,7 @@ const OurProcess = () => {
               Join registration fee one time only 350/-
             </h3>
             <p className="text-sm text-gray-700">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-              Suspendisse varius enim in eros.
+            This one-time fee covers administrative costs and gives you access to our platform and support services. 
             </p>
           </div>
         </div>
@@ -41,8 +40,8 @@ const OurProcess = () => {
           <div>
             <h3 className="font-bold uppercase">Document Verification</h3>
             <p className="text-sm text-gray-700">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-              Suspendisse varius enim in eros.
+            To ensure the safety and security of our platform, we require document verification and the verification is a simple and quick process.
+
             </p>
           </div>
         </div>
@@ -53,8 +52,7 @@ const OurProcess = () => {
           <div>
             <h3 className="font-bold uppercase">Earn Money</h3>
             <p className="text-sm text-gray-700">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-              Suspendisse varius enim in eros.
+            Once your registration and verification are complete, you can start earning
             </p>
           </div>
         </div>

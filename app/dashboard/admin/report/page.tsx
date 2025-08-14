@@ -55,12 +55,50 @@ export default function ReportPage() {
   const [referralData, setReferralData] = useState<DownlineUser[]>([]);
   const [referralLoading, setReferralLoading] = useState(false);
   
-  // --- NEW STATE FOR PDF DOWNLOAD ---
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // --- MODIFICATION START ---
+  // New state to store referral counts and their loading status
+  const [referralCounts, setReferralCounts] = useState<Map<string, number>>(new Map());
+  const [countsLoading, setCountsLoading] = useState(false);
+  // --- MODIFICATION END ---
 
   useEffect(() => {
     dispatch(fetchUsers({ month: selectedMonth, year: selectedYear, limit: 1000 }));
   }, [dispatch, selectedYear, selectedMonth]);
+
+  // --- MODIFICATION START ---
+  // New useEffect to fetch referral counts when the user list changes
+  useEffect(() => {
+    const validUsers = users.filter(user => user._id);
+
+    if (validUsers.length > 0) {
+      setCountsLoading(true);
+      const fetchReferralCounts = async () => {
+
+        // Now, map over the *filtered* list of users.
+        const countPromises = validUsers.map(user =>
+          axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/referral-count/${user._id}`)
+            // We can now safely assert user._id is a string with `user._id!`
+            .then(res => ({ userId: user._id!, count: res.data.data.count }))
+            .catch(() => ({ userId: user._id!, count: 0 }))
+        );
+
+
+        const results = await Promise.all(countPromises);
+        console.log(results)
+        const newCounts = new Map<string, number>();
+        results.forEach(result => {
+          newCounts.set(result.userId, result.count);
+        });
+        setReferralCounts(newCounts);
+        setCountsLoading(false);
+      };
+
+      fetchReferralCounts();
+    }
+  }, [users]); // This effect depends on the 'users' array
+  // --- MODIFICATION END ---
   
   const handleToggleReferrals = async (userId: string) => {
     if (expandedUserId === userId) {
@@ -84,7 +122,6 @@ export default function ReportPage() {
     }
   };
 
-  // --- NEW ADVANCED PDF DOWNLOAD HANDLER ---
   const handleDownloadDetailedPDF = async () => {
     setIsDownloading(true);
     toast.info("Preparing detailed report... This might take a moment.", { duration: 10000 });
@@ -93,31 +130,27 @@ export default function ReportPage() {
       const token = Cookies.get('auth-token');
       if (!token) throw new Error("Authentication required.");
 
-      // Step 1: Fetch all referral data in parallel
       const referralPromises = users.map(user =>
         axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/downline/${user._id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }).then(res => ({ userId: user._id, referrals: res.data?.data || [] }))
-          .catch(() => ({ userId: user._id, referrals: [] })) // Handle failed requests gracefully
+          .catch(() => ({ userId: user._id, referrals: [] }))
       );
       
       const allReferralsData = await Promise.all(referralPromises);
       const referralsMap = new Map(allReferralsData.map(item => [item.userId, item.referrals]));
 
-      // Step 2: Generate the PDF
       const doc = new jsPDF();
       doc.text(`Detailed User Report - ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`, 14, 15);
       
-      let currentY = 20; // Track the Y position on the page
+      let currentY = 20;
 
       users.forEach((user, index) => {
-        // Add a page break if there isn't enough space for the next entry
         if (currentY > 250) {
           doc.addPage();
           currentY = 20;
         }
 
-        // Main user table
         const mainTableColumn = ["S.no.", "Name", "Phone", "Role", "Latest Role ID", "Income"];
         const latestRoleId = user.roleId && user.roleId.length > 0 ? user.roleId[user.roleId.length - 1] : 'N/A';
         const userRow = [[
@@ -136,9 +169,8 @@ export default function ReportPage() {
           theme: 'striped'
         });
 
-        currentY = (doc as any).lastAutoTable.finalY; // Update Y position
+        currentY = (doc as any).lastAutoTable.finalY;
 
-        // Sub-table for referrals
         const userReferrals = referralsMap.get(user._id);
         if (userReferrals && userReferrals.length > 0) {
           const subTableColumn = ["Referred User", "Phone", "Status", "Role ID", "Income"];
@@ -159,13 +191,13 @@ export default function ReportPage() {
             headStyles: { fillColor: [241, 245, 249] , textColor: [0, 0, 0]}
           });
 
-          currentY = (doc as any).lastAutoTable.finalY; // Update Y position again
+          currentY = (doc as any).lastAutoTable.finalY;
         } else {
             doc.text("No users referred.", 14, currentY + 7);
             currentY += 10;
         }
         
-        currentY += 5; // Add spacing between user blocks
+        currentY += 5;
       });
 
       doc.save(`detailed_user_report_${selectedYear}_${selectedMonth}.pdf`);
@@ -179,7 +211,7 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div className="w-full mx-auto p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">User Reports</h1>
         <div className="flex items-center gap-2">
@@ -210,14 +242,17 @@ export default function ReportPage() {
                   <TableHead>Role</TableHead>
                   <TableHead>Latest Role ID</TableHead>
                   <TableHead>Income</TableHead>
+                  {/* --- MODIFICATION START --- */}
+                  <TableHead className="text-center">Referred Users</TableHead>
+                  {/* --- MODIFICATION END --- */}
                   <TableHead className="text-center">View Referrals</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={7} className="h-20 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-20 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
                 ) : error ? (
-                  <TableRow><TableCell colSpan={7} className="h-20 text-center text-red-500">{error}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-20 text-center text-red-500">{error}</TableCell></TableRow>
                 ) : users.length > 0 ? (
                   users.map((user, idx) => (
                     <React.Fragment key={user._id}>
@@ -228,6 +263,15 @@ export default function ReportPage() {
                         <TableCell>{user.role ? user.role.toUpperCase() : 'N/A'}</TableCell>
                         <TableCell>{user.roleId && user.roleId.length > 0 ? user.roleId[user.roleId.length - 1] : 'N/A'}</TableCell>
                         <TableCell>{typeof user.income === 'number' ? `₹${user.income.toLocaleString()}`: 'N/A'}</TableCell>
+                        {/* --- MODIFICATION START --- */}
+                        <TableCell className="text-center">
+                          {countsLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                          ) : (
+                            user._id ? (referralCounts.get(user._id) ?? 0) : 0
+                          )}
+                        </TableCell>
+                        {/* --- MODIFICATION END --- */}
                         <TableCell className="text-center">
                           <Button size="icon" variant="ghost" onClick={() => handleToggleReferrals(user._id!)}>
                             <ChevronDown className={`h-5 w-5 transition-transform ${expandedUserId === user._id ? 'rotate-180' : ''}`} />
@@ -237,7 +281,7 @@ export default function ReportPage() {
                       
                       {expandedUserId === user._id && (
                         <TableRow className="bg-muted/50 hover:bg-muted/50">
-                          <TableCell colSpan={7} className="p-0">
+                          <TableCell colSpan={8} className="p-0">
                             <div className="p-4">
                               <h4 className="font-semibold text-md mb-2">Users Referred by {user.name}</h4>
                               {referralLoading ? (
@@ -269,7 +313,7 @@ export default function ReportPage() {
                     </React.Fragment>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={7} className="h-20 text-center text-muted-foreground">No users found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-20 text-center text-muted-foreground">No users found.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

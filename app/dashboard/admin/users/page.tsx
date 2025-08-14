@@ -118,6 +118,7 @@ export default function Users() {
     const params: any = { page: pagination.currentPage, role: roleFilter, status };
     if (debouncedSearch) params.search = debouncedSearch;
     dispatch(fetchUsers(params));
+
   }, [dispatch, debouncedSearch, status, roleFilter, pagination.currentPage]);
 
   // Debounce search input
@@ -183,7 +184,7 @@ export default function Users() {
         toast.success("User updated successfully!");
       } else {
         // --- Add New User Logic (with new referral assignment) ---
-        let refferedBy = 'admin123'; // Default for top-level roles
+        let refferedBy = 'ADMIN001'; // Default for top-level roles
 
         // Assign referrer based on the role being created
         switch (form.role) {
@@ -202,13 +203,12 @@ export default function Users() {
         }
 
         // Generate the new user's first roleId
-        const newRoleId = generateRoleId(form.role!);
+        // const newRoleId = generateRoleId(form.role!);
 
         // Construct the final payload for the new user
         const payload = {
           ...form,
           refferedBy,
-          roleId: [newRoleId], // Initialize the roleId array
         };
         
         await dispatch(addUser(payload));
@@ -250,6 +250,8 @@ export default function Users() {
   };
 
   const handleViewDownline = async (user: User) => {
+    // const referrerId = await assignRefferer("DIV");
+    // console.log(referrerId)
     if (!user._id) return;
     setViewingUser(user);
     setIsDownlineModalOpen(true);
@@ -272,6 +274,9 @@ export default function Users() {
       setDownlineLoading(false);
     }
   };
+
+  
+  
 
   return (
     <div className="w-full mx-auto mt-2">

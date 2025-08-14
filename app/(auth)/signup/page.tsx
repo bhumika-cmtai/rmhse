@@ -21,6 +21,7 @@ const SignupPage = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    fatherName: "",
     password: "",
     confirmPassword: "",
     phoneNumber: "",
@@ -71,6 +72,7 @@ const SignupPage = () => {
         email: formData.email,
         password: formData.password,
         phoneNumber: formData.phoneNumber,
+        fatherName: formData.fatherName,
         dob: formData.dob || undefined,
         status: "block"
         // memberId: newMemberId,
@@ -80,7 +82,7 @@ const SignupPage = () => {
       await dispatch(signup(signupData) as any);
 
     } catch (err: any) {
-      toast.error("Failed to signup please try again.");
+      toast.error(err);
     }
   };
 
@@ -151,6 +153,21 @@ const SignupPage = () => {
               className="w-full pl-10 pr-4 py-5 bg-white border-[1px] border-black rounded-[12px] shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
               style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
               value={formData.phoneNumber}
+              onChange={handleInputChange}
+              required
+              disabled={isLoading}
+            />
+          </div>
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-800" />
+            <Input
+              id="fatherName"
+              name="fatherName"
+              type="text"
+              placeholder="Father Name"
+              className="w-full pl-10 pr-4 py-5 bg-white border-[1px] border-black rounded-[12px] shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
+              style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
+              value={formData.fatherName}
               onChange={handleInputChange}
               required
               disabled={isLoading}

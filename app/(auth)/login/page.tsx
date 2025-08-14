@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, Lock, Loader2 } from "lucide-react";
+import { User, Lock, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -17,7 +17,9 @@ const LoginPage = () => {
   
   const { isLoading, error, isAuthenticated, user } = useSelector((state: RootState) => state.auth);
   
-  const [email, setEmail] = useState("");
+  // --- MODIFICATION START ---
+  const [joinId, setJoinId] = useState(""); // Changed email state to joinId
+  // --- MODIFICATION END ---
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -54,21 +56,19 @@ const LoginPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-
-    // console.log("Submitting login form...");
-    const result = await dispatch(login({ email, password, rememberMe }) as any);
-    
-    // console.log("Login result:", result);
-    
-    if (!result) {
-      // console.log("Login failed, result is null");
-      // Error is already handled by the slice
-      return;
-    }
+  // --- MODIFICATION START ---
+  if (!joinId || !password) {
+    toast.error("Please fill in all fields");
+    return;
+  }
+  // Dispatch with joinId instead of email
+  const result = await dispatch(login({ joinId, password, rememberMe }) as any);
+  // --- MODIFICATION END ---
+  
+  if (!result) {
+    // Error is already handled by the slice
+    return;
+  }
     
     // console.log("Login successful, result:", result);
   };
@@ -87,15 +87,15 @@ const LoginPage = () => {
           
           {/* Email Input */}
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <Input
               id="email"
-              type="email"
-              placeholder="example@email.com"
+              type="text"
+              placeholder="RMHSE****"
               className="w-full pl-10 pr-4 py-5 bg-white border-[1px] border-black rounded-[12px] focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
               style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={joinId}
+              onChange={(e) => setJoinId(e.target.value)}
               required
               disabled={isLoading}
             />
