@@ -204,7 +204,7 @@ export default function Dashboard() {
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h1 className="text-3xl font-bold">User Dashboard</h1>
-                <Button variant="outline" onClick={handleUpgrade} disabled={!upgradeDetails.possible || isUpgrading}>
+                <Button size="lg" className="py-6 px-5 text-base " variant="default" onClick={handleUpgrade} disabled={!upgradeDetails.possible || isUpgrading}>
                     {isUpgrading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowUpCircle className="mr-2 h-4 w-4" />}
                     {isUpgrading ? 'Processing...' : upgradeDetails.buttonText}
                 </Button>

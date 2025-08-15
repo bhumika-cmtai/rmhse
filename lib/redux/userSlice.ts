@@ -20,6 +20,7 @@ export interface User {
   gender?: string;
   joinId? :string;
   roleId?: string[];
+  signupStep?:string;
   withdrawRequest?: string[];
   extendRequest?: string[];
   limit?: number;

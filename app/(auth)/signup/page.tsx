@@ -79,7 +79,32 @@ const SignupPage = () => {
         // refferedBy: referrerId,
       };
       
-      await dispatch(signup(signupData) as any);
+      // await dispatch(signup(signupData) as any);
+
+      const result = await dispatch(signup(signupData) as any);
+
+      // If the thunk is successful, it will return an object with a 'redirect' path
+      if (result && result.redirect) {
+        const { redirect,responseUser } = result;
+        // console.log("---result---",result)
+        // Provide context-specific feedback to the user before redirecting
+        // console.log("----redirect----", redirect)
+        if (redirect === '/upload-details') {
+          toast.success("Account created! Please complete your details.");
+        } else if (redirect === '/payment') {
+          // console.log("we hit the /paymetn redirect")
+          if (responseUser._id) {
+            // console.log("found usr id redirecting to payment page")
+            toast.info("Welcome back! Please complete your payment to proceed.");
+            router.push(`/payment?userId=${responseUser._id}`);
+          }
+        } else {
+          toast.success("Success! Redirecting...");
+        }
+
+        // Programmatically navigate the user to the next step
+        // router.push(redirect);
+      }
 
     } catch (err: any) {
       toast.error(err);

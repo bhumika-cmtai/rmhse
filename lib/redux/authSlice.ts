@@ -20,6 +20,7 @@ export interface User {
   updatedOn: string;
   memberId?: string;
   refferedBy: string;
+  signupStep?: string;
   // leaderCode?: string;
   // work_experience?: string;
   // abhi_aap_kya_karte_hai?: string;
@@ -154,7 +155,7 @@ export const signup = (userData: { name: string; email: string; password: string
     const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/signup`, userData);
     if (response.data) {
       console.log(response.data)
-      const { user, token } = response.data.data;
+      const { user, token, redirect } = response.data.data;
       
       // Set the cookie
       const cookieOptions: Cookies.CookieAttributes = {
@@ -165,7 +166,9 @@ export const signup = (userData: { name: string; email: string; password: string
       Cookies.set('auth-token', token, cookieOptions);
       dispatch(setUser(user));
       // console.log(user)
-      return user;
+      // return user;
+      return { redirect: redirect || '/upload-details' , responseUser: user};
+
     }
     else {
       const errorMessage = response.data?.errorMessage || "Failed to signup. Try again.";
