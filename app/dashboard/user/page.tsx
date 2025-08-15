@@ -123,35 +123,53 @@ export default function Dashboard() {
           toast.error("Cannot upgrade: User data is not loaded.");
           return;
         }
-        
-        const hasBankDetails = user.account_number && user.Ifsc;
-        const hasPanCard = !!user.pancard;
 
-        if (!hasBankDetails && !hasPanCard) {
-          toast.error("Please add your PAN Card or Bank Details before upgrading.", {
-            description: "Go to Settings to add your verification details.",
-            duration: 5000,
-          });
-          return;
+        // --- Role-based Validation Logic ---
+        if (user.role === 'MEM') {
+            const hasBankDetails = user.account_number && user.Ifsc;
+            const hasPanCard = !!user.pancard;
+            if (!hasBankDetails && !hasPanCard) {
+                toast.error("Please add your PAN Card or Bank Details before upgrading.", {
+                    description: "You can add your details in the Settings page.",
+                    duration: 5000,
+                });
+                return; // Stop the upgrade
+            }
+        } else {
+            // For roles DIV, DIST, etc.
+            const referralCount = userStats.referredUsersCount;
+            const referralLimit = userStats.referralLimit;
+            // console.log("---referralCount---", referralCount)
+            // console.log("---referralLimit---", referralLimit)
+            if (referralCount < referralLimit) {
+                toast.error("You cannot upgrade yet.", {
+                    description: `Your referral goal of ${referralLimit} is not met. You currently have ${referralCount} referrals.`,
+                    duration: 5000,
+                });
+                return; // Stop the upgrade
+            }
         }
 
+        // --- If validation passes, proceed with the upgrade ---
         setIsUpgrading(true);
-        const toastId = toast.loading("Upgrading your role...");
+        const toastId = toast.loading("Upgrading your role, please wait...");
         try {
             const resultAction = await dispatch(upgradeUserRole());
+            
+            // Check if the action was fulfilled and has a payload
             if (resultAction) {
                 toast.success(`Congratulations! You've been upgraded to ${resultAction.payload.role}.`, { id: toastId });
             } else {
+                // Handle rejected case
                 const errorMessage = (resultAction.payload as any)?.message || "Upgrade failed. Please contact support.";
                 toast.error(errorMessage, { id: toastId });
             }
         } catch (error) {
-            toast.error("An unexpected error occurred during upgrade.", { id: toastId });
+            toast.error("An unexpected error occurred during the upgrade.", { id: toastId });
         } finally {
             setIsUpgrading(false);
         }
     };
-    
     // --- STEP 1: REMOVE UNNECESSARY LOGIC ---
     // const largestCommission = useMemo(() => ...); // This line has been removed.
 
