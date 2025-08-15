@@ -18,7 +18,7 @@ const PaymentPage = () => {
   
   const [loading, setLoading] = useState(false); // For creating the order
   const [isVerifying, setIsVerifying] = useState(false); // --- New state for verification ---
-  const [paymentAmount, setPaymentAmount] = useState(1);
+  const [paymentAmount, setPaymentAmount] = useState(350);
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
