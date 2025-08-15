@@ -43,11 +43,19 @@ export default function UploadDocumentsPage() {
     }
   }, [dispatch, user]);
 
-  // Handle file selection and create local previews
+  // Handle file selection and create local previews with size validation
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files[0]) {
       const file = files[0];
+      const maxFileSize = 2 * 1024 * 1024; // 2 MB
+
+      if (file.size > maxFileSize) {
+        toast.error("File size should not exceed 2 MB.");
+        e.target.value = ''; // Clear the input
+        return;
+      }
+
       setDocumentFiles(prev => ({ ...prev, [name]: file }));
       setDocumentPreviews(prev => ({ ...prev, [name]: URL.createObjectURL(file) }));
     }
