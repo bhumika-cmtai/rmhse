@@ -18,11 +18,13 @@ export interface User {
   permanentAddress?: string;
   currentAddress?: string;
   gender?: string;
+  joinId? :string;
   roleId?: string[];
   withdrawRequest?: string[];
   extendRequest?: string[];
   limit?: number;
   role?: string;
+  fatherName?: string;
   adharFront?: string; // URL to the image
   adharBack?: string;  // URL to the image
   pancard?: string;    // URL to the image
@@ -197,12 +199,13 @@ export const fetchUserById = (id: string) => async (dispatch: Dispatch) => {
   }
 };
 
-export const addUser = (user: User) => async (dispatch: Dispatch) => {
+export const addUser = (formData: FormData) => async (dispatch: Dispatch) => {
   dispatch(setLoading(true));
   try {
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/addUser`, user);
+    // Axios will automatically set the correct headers for FormData
+    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/addUser`, formData);
     if (response.data) {
-      console.log(response.data)
+      console.log(response.data);
       dispatch(setLoading(false));
       return response.data;
     } else {
@@ -210,27 +213,35 @@ export const addUser = (user: User) => async (dispatch: Dispatch) => {
       return null;
     }
   } catch (error: unknown) {
-    const message = typeof error === "object" && error && "message" in error ? (error as { message?: string }).message : String(error);
-    dispatch(setError(message || "Unknown error"));
+    const axiosError = error as AxiosError; // More specific error typing
+    const message = (axiosError.response?.data as any)?.message || axiosError.message || "Unknown error occurred";
+    dispatch(setError(message));
+    // It's good practice to re-throw or return a rejected promise for the component to catch
+    throw new Error(message);
   }
 };
 
-export const updateUser = (id: string, user: User) => async (dispatch: Dispatch) => {
+export const updateUser = (id: string, formData: FormData) => async (dispatch: Dispatch) => {
   dispatch(setLoading(true));
   try {
-    const response = await axios.put(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/updateUser/${id}`, user);
+    // Axios will automatically set the correct headers for FormData
+    const response = await axios.put(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/updateUser/${id}`, formData);
     if (response.data) {
-      console.log(response.data)
+      console.log(response.data);
       dispatch(setLoading(false));
       return response.data;
     } else {
       dispatch(setError(response.data.message));
     }
   } catch (error: unknown) {
-    const message = typeof error === "object" && error && "message" in error ? (error as { message?: string }).message : String(error);
-    dispatch(setError(message || "Unknown error"));
+    const axiosError = error as AxiosError; // More specific error typing
+    const message = (axiosError.response?.data as any)?.message || axiosError.message || "Unknown error occurred";
+    dispatch(setError(message));
+    // It's good practice to re-throw or return a rejected promise for the component to catch
+    throw new Error(message); 
   }
 };
+
 
 export const deleteUser = (id: string) => async (dispatch: Dispatch) => {
   dispatch(setLoading(true));

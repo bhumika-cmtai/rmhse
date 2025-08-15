@@ -106,10 +106,11 @@ const ICard = ({ user }: ICardProps) => {
         <p className="text-sm font-semibold text-gray-500">{user.role || 'JOB POSITION'}</p>
       </div>
 
-      <div className="mt-6 w-full text-sm z-10 space-y-2 pl-4 text-gray-900">
+      <div className="text-center mt-2 w-full text-sm z-10 space-y-2 pl-4 text-gray-900 z-10">
         <div className="flex"><span className="font-bold w-28">Name</span><span className="font-bold mr-2">:</span><span>{user.name || 'XXXXXXXX'}</span></div>
         <div className="flex"><span className="font-bold w-28">Father Name</span><span className="font-bold mr-2">:</span><span>{user.fatherName || 'XXXXXXXXXX'}</span></div>
         <div className="flex"><span className="font-bold w-28">D.O.B</span><span className="font-bold mr-2">:</span><span>{formatDate(user.dob)}</span></div>
+        <div className="flex"><span className="font-bold w-28">Join ID</span><span className="font-bold mr-2">:</span><span>{user.joinId || 'N/A'}</span></div>
         <div className="flex"><span className="font-bold w-28">Joining</span><span className="font-bold mr-2">:</span><span>{formatDate(user.createdOn)}</span></div>
         <div className="flex"><span className="font-bold w-28">Post</span><span className="font-bold mr-2">:</span><span className="break-all">{latestRoleId}</span></div>
       </div>
@@ -124,15 +125,15 @@ const ICard = ({ user }: ICardProps) => {
           alt="Official Stamp"
           width={30}
           height={30}
-          className="absolute -bottom-2 right-12 z-10 opacity-90 z-20"
+          className="absolute -bottom-0 right-13  opacity-90 z-20"
         />
         {/* Signature Image (Top Layer) */}
         <Image
           src="/signature.jpg"
           alt="Signature"
-          width={60}
+          width={56}
           height={20}
-          className="absolute bottom-2 right-2 "
+          className="absolute -bottom-6 right-0 -z-20 "
         />
       </div>
     </div>

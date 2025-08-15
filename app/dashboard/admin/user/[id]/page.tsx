@@ -21,6 +21,7 @@ interface User {
     profileImage?: string; // Assuming these properties exist
     role?: string;
     role_id?: string[];
+    joinId?: string;
     status?: string;
     emergency_num?: string;
     dob?: string;
@@ -82,6 +83,20 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
 
   // Resolve the server-side params promise
   const resolvedParams = React.use(params);
+
+  const formatDate = (timestamp: string | number) => {
+    if (!timestamp) return 'N/A';
+    // Ensure the timestamp is a number before creating a Date
+    const numericTimestamp = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
+    if (isNaN(numericTimestamp)) {
+        return "Invalid Date";
+    }
+    return new Date(numericTimestamp).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
   // console.log("user", user)
   useEffect(() => {
     if (resolvedParams.id) {
@@ -185,11 +200,12 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
             {activeTab === 'official' && (
               <div>
                 <DetailItem label="Role"><span className="capitalize">{user.role}</span></DetailItem>
+                <DetailItem label="Join ID"><span className="capitalize">{user.joinId}</span></DetailItem>
                 <DetailItem label="Primary Role ID" value={user.roleId?.[0]} />
                 <DetailItem label="All Assigned Role IDs" value={user.roleId?.join(', ')} />
                 <DetailItem label="Referred By" value={user.refferedBy} />
                 <DetailItem label="Status"><Badge variant={user.status === "Block" ? "destructive" : "default"}>{user.status}</Badge></DetailItem>
-                <DetailItem label="Joined On" value={user.createdOn ? new Date(user.createdOn).toLocaleString() : "-"} />
+                <DetailItem label="Joined On" value={user.createdOn ? formatDate(user.createdOn) : "-"} />
               </div>
             )}
             

@@ -106,10 +106,11 @@ const ICard = ({ user }: ICardProps) => {
         <p className="text-sm font-semibold text-gray-500">{user.role || 'JOB POSITION'}</p>
       </div>
 
-      <div className="mt-6 w-full text-sm z-10 space-y-2 pl-4 text-gray-900">
+      <div className="text-center mt-2 w-full text-sm z-10 space-y-2 pl-4 text-gray-900 z-10">
         <div className="flex"><span className="font-bold w-28">Name</span><span className="font-bold mr-2">:</span><span>{user.name || 'XXXXXXXX'}</span></div>
         <div className="flex"><span className="font-bold w-28">Father Name</span><span className="font-bold mr-2">:</span><span>{user.fatherName || 'XXXXXXXXXX'}</span></div>
         <div className="flex"><span className="font-bold w-28">D.O.B</span><span className="font-bold mr-2">:</span><span>{formatDate(user.dob)}</span></div>
+        <div className="flex"><span className="font-bold w-28">Join ID</span><span className="font-bold mr-2">:</span><span>{user.joinId || 'N/A'}</span></div>
         <div className="flex"><span className="font-bold w-28">Joining</span><span className="font-bold mr-2">:</span><span>{formatDate(user.createdOn)}</span></div>
         <div className="flex"><span className="font-bold w-28">Post</span><span className="font-bold mr-2">:</span><span className="break-all">{latestRoleId}</span></div>
       </div>
@@ -124,15 +125,15 @@ const ICard = ({ user }: ICardProps) => {
           alt="Official Stamp"
           width={30}
           height={30}
-          className="absolute -bottom-2 right-12 opacity-90 z-20"
+          className="absolute -bottom-0 right-13  opacity-90 z-20"
         />
         {/* Signature Image (Top Layer) */}
         <Image
           src="/signature.jpg"
           alt="Signature"
-          width={60}
+          width={56}
           height={20}
-          className="absolute bottom-2 right-2 "
+          className="absolute -bottom-6 right-0 -z-20 "
         />
       </div>
     </div>
@@ -159,7 +160,7 @@ export default function SettingsPage() {
   const [isPersonalModalOpen, setPersonalModalOpen] = useState(false);
   const [isDocumentModalOpen, setDocumentModalOpen] = useState(false);
   const [isBankModalOpen, setBankModalOpen] = useState(false);
-  const [personalData, setPersonalData] = useState({ name: '', email: '', phoneNumber: '', permanentAddress: '',fatherName: '' ,currentAddress: '', dob: '', gender: 'Male' as 'Male' | 'Female' | 'Other', emergencyNumber: '', newPassword: '', confirmPassword: '' });
+  const [personalData, setPersonalData] = useState({ name: '', email: '', phoneNumber: '', permanentAddress: '', currentAddress: '', dob: '', gender: 'Male' as 'Male' | 'Female' | 'Other', emergencyNumber: '', newPassword: '', confirmPassword: '', fatherName: '' });
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string>('');
   const [documentFiles, setDocumentFiles] = useState<{ pancard: File | null; adharFront: File | null; adharBack: File | null; }>({ pancard: null, adharFront: null, adharBack: null });
@@ -169,7 +170,7 @@ export default function SettingsPage() {
   useEffect(() => { if (!user) dispatch(fetchCurrentUser()); }, [dispatch, user]);
   useEffect(() => {
     if (user) {
-      setPersonalData({ name: user.name || '', email: user.email || '',fatherName: user.fatherName || '' ,phoneNumber: user.phoneNumber || '', permanentAddress: user.permanentAddress || '', currentAddress: user.currentAddress || '', dob: user.dob ? user.dob.split('T')[0] : '', gender: (user.gender as 'Male' | 'Female' | 'Other') || 'Male', emergencyNumber: user.emergencyNumber || '', newPassword: '', confirmPassword: '' });
+      setPersonalData({ name: user.name || '', email: user.email || '', phoneNumber: user.phoneNumber || '', permanentAddress: user.permanentAddress || '', currentAddress: user.currentAddress || '', dob: user.dob ? user.dob.split('T')[0] : '', gender: (user.gender as 'Male' | 'Female' | 'Other') || 'Male', emergencyNumber: user.emergencyNumber || '', newPassword: '', confirmPassword: '', fatherName: (user as any).fatherName || '' });
       setProfileImagePreview((user as any).profileImage || '');
       setDocumentPreviews({ pancard: user.pancard || '', adharFront: user.adharFront || '', adharBack: user.adharBack || '' });
       setBankData({ account_number: user.account_number || '', Ifsc: user.Ifsc || '', upi_id: user.upi_id || '' });
@@ -283,7 +284,7 @@ export default function SettingsPage() {
                 {activeTab === 'personal' && (
                     <div>
                         <DetailItem label="Full Name" value={user.name} />
-                        <DetailItem label="Father's Name" value={user.fatherName} />
+                        <DetailItem label="Father's Name" value={(user as any).fatherName} />
                         <DetailItem label="Email" value={user.email} />
                         <DetailItem label="Phone Number" value={user.phoneNumber} />
                         <DetailItem label="Permanent Address" value={user.permanentAddress} />
@@ -294,7 +295,7 @@ export default function SettingsPage() {
                         <Dialog open={isPersonalModalOpen} onOpenChange={setPersonalModalOpen}><DialogTrigger asChild><Button className="mt-6 w-full md:w-auto"><Edit className="mr-2 h-4 w-4" /> Update Personal Details</Button></DialogTrigger><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Update Personal Details</DialogTitle></DialogHeader><form onSubmit={handlePersonalUpdate} className="space-y-4 pt-4"><div className="flex flex-col items-center space-y-2"><Label htmlFor="profileImage-upload">Profile Image</Label><Avatar className="w-24 h-24 border-2"><AvatarImage src={profileImagePreview} /><AvatarFallback>{user.name.charAt(0)}</AvatarFallback></Avatar><Input id="profileImage-upload" name="profileImage" type="file" accept="image/*" onChange={handleProfileImageChange} className="text-xs"/></div><Label>Name</Label><Input value={personalData.name} onChange={(e) => setPersonalData({...personalData, name: e.target.value})} /><Label>Father's Name</Label><Input value={personalData.fatherName} onChange={(e) => setPersonalData({...personalData, fatherName: e.target.value})} /><Label>Email</Label><Input type="email" value={personalData.email} disabled /><Label>Phone Number</Label><Input value={personalData.phoneNumber} onChange={(e) => setPersonalData({...personalData, phoneNumber: e.target.value})} /><Label>Permanent Address</Label><Input value={personalData.permanentAddress} onChange={(e) => setPersonalData({...personalData, permanentAddress: e.target.value})} /><Label>Current Address</Label><Input value={personalData.currentAddress} onChange={(e) => setPersonalData({...personalData, currentAddress: e.target.value})} /><Label>Date of Birth</Label><Input type="date" value={personalData.dob} onChange={(e) => setPersonalData({...personalData, dob: e.target.value})} /><Label>Gender</Label><Select value={personalData.gender} onValueChange={(v: any) => setPersonalData({...personalData, gender: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent></Select><Label>Emergency Number</Label><Input value={personalData.emergencyNumber} onChange={(e) => setPersonalData({...personalData, emergencyNumber: e.target.value})} /><Label className="font-semibold pt-2 block">Change Password</Label><Input type="password" placeholder="New Password (leave blank to keep current)" value={personalData.newPassword} onChange={(e) => setPersonalData({...personalData, newPassword: e.target.value})} /><Input type="password" placeholder="Confirm New Password" value={personalData.confirmPassword} onChange={(e) => setPersonalData({...personalData, confirmPassword: e.target.value})} /><DialogFooter><Button type="submit" disabled={isUpdating}>{isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Changes"}</Button></DialogFooter></form></DialogContent></Dialog>
                     </div>
                 )}
-                {activeTab === 'official' && (<div><DetailItem label="Role"><span className="capitalize">{user.role}</span></DetailItem><DetailItem label="Join ID"><span className="capitalize">{user.joinId}</span></DetailItem><DetailItem label="Latest Role ID" value={(user as any).roleId?.length > 0 ? (user as any).roleId.slice(-1) : 'N/A'} /><DetailItem label="All Assigned IDs" value={(user as any).roleId?.join(', ')} /><DetailItem label="Account Status"><Badge variant={user.status === "Block" ? "destructive" : "default"}>{user.status}</Badge></DetailItem><DetailItem label="Joined On" value={user.createdOn ? new Date(parseInt(user.createdOn)).toLocaleString() : '-'} /></div>)}
+                {activeTab === 'official' && (<div><DetailItem label="Role"><span className="capitalize">{user.role}</span></DetailItem><DetailItem label="Latest Role ID" value={(user as any).roleId?.length > 0 ? (user as any).roleId.slice(-1) : 'N/A'} /><DetailItem label="All Assigned IDs" value={(user as any).roleId?.join(', ')} /><DetailItem label="Account Status"><Badge variant={user.status === "Block" ? "destructive" : "default"}>{user.status}</Badge></DetailItem><DetailItem label="Joined On" value={user.createdOn ? new Date(parseInt(user.createdOn)).toLocaleString() : '-'} /></div>)}
                 {activeTab === 'documents' && (<div><DocumentItem label="PAN Card" imageUrl={user.pancard} /><DocumentItem label="Aadhaar Card (Front)" imageUrl={user.adharFront} /><DocumentItem label="Aadhaar Card (Back)" imageUrl={user.adharBack} /><Dialog open={isDocumentModalOpen} onOpenChange={setDocumentModalOpen}><DialogTrigger asChild><Button className="mt-6 w-full md:w-auto"><Edit className="mr-2 h-4 w-4" /> Update Documents</Button></DialogTrigger><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Update Documents</DialogTitle></DialogHeader><form onSubmit={handleDocumentUpdate} className="space-y-6 pt-4"><div className="space-y-2"><Label htmlFor="pancard-upload">PAN Card</Label>{documentPreviews.pancard && <img src={documentPreviews.pancard} alt="PAN Preview" className="rounded-lg border object-cover w-full max-w-xs" /> }<Input id="pancard-upload" name="pancard" type="file" accept="image/*" onChange={handleDocumentFileChange} className="mt-2" /></div><div className="space-y-2"><Label htmlFor="adharFront-upload">Aadhaar Card (Front)</Label>{documentPreviews.adharFront && <img src={documentPreviews.adharFront} alt="Aadhaar Front Preview" className="rounded-lg border object-cover w-full max-w-xs" /> }<Input id="adharFront-upload" name="adharFront" type="file" accept="image/*" onChange={handleDocumentFileChange} className="mt-2" /></div><div className="space-y-2"><Label htmlFor="adharBack-upload">Aadhaar Card (Back)</Label>{documentPreviews.adharBack && <img src={documentPreviews.adharBack} alt="Aadhaar Back Preview" className="rounded-lg border object-cover w-full max-w-xs" /> }<Input id="adharBack-upload" name="adharBack" type="file" accept="image/*" onChange={handleDocumentFileChange} className="mt-2" /></div><DialogFooter><Button type="submit" disabled={isUpdating}>{isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><Upload className="mr-2 h-4 w-4" /> Upload & Save</>}</Button></DialogFooter></form></DialogContent></Dialog></div>)}
                 {activeTab === 'bank' && (<div><DetailItem label="Account Number" value={user.account_number} /><DetailItem label="IFSC Code" value={user.Ifsc} /><DetailItem label="UPI ID" value={user.upi_id} /><Dialog open={isBankModalOpen} onOpenChange={setBankModalOpen}><DialogTrigger asChild><Button className="mt-6 w-full md:w-auto"><Edit className="mr-2 h-4 w-4" /> Update Bank Details</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Update Bank Details</DialogTitle></DialogHeader><form onSubmit={handleBankUpdate} className="space-y-4 pt-4"><Label>Account Number</Label><Input value={bankData.account_number} onChange={(e) => setBankData({...bankData, account_number: e.target.value})} /><Label>IFSC Code</Label><Input value={bankData.Ifsc} onChange={(e) => setBankData({...bankData, Ifsc: e.target.value})} /><Label>UPI ID</Label><Input value={bankData.upi_id} onChange={(e) => setBankData({...bankData, upi_id: e.target.value})} /><DialogFooter><Button type="submit" disabled={isUpdating}>{isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Changes"}</Button></DialogFooter></form></DialogContent></Dialog></div>)}
             </CardContent>

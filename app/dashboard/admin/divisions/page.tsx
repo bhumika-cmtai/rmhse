@@ -204,42 +204,42 @@ export default function DivUsers() {
     dispatch(fetchUsers({ page: pagination.currentPage, role: 'DIV', status: status, search: debouncedSearch }));
   };
   
-  const handleFormSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setFormLoading(true);
+  // const handleFormSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
+  //   setFormLoading(true);
     
-    // Ensure the role is always 'DIV' upon submission from this page
-    let dataToSubmit: User = { ...form, role: 'DIV' };
+  //   // Ensure the role is always 'DIV' upon submission from this page
+  //   let dataToSubmit: User = { ...form, role: 'DIV' };
 
-    try {
-      if (editUser && editUser._id) {
-        // Since this page is for DIV users, we assume no role change is intended here.
-        // If a new roleId is needed for some other reason, that logic can be added.
-        const result = await dispatch(updateUser(editUser._id, dataToSubmit) as any);
-        if (result) {
-          toast.success("DIV User updated successfully!");
-          setIsModalOpen(false);
-          refreshData();
-        }
-      } else {
-        // --- ADD USER LOGIC ---
-        const newRoleId = generateRoleId('DIV');
-        dataToSubmit.roleId = [newRoleId];
+  //   try {
+  //     if (editUser && editUser._id) {
+  //       // Since this page is for DIV users, we assume no role change is intended here.
+  //       // If a new roleId is needed for some other reason, that logic can be added.
+  //       const result = await dispatch(updateUser(editUser._id, dataToSubmit) as any);
+  //       if (result) {
+  //         toast.success("DIV User updated successfully!");
+  //         setIsModalOpen(false);
+  //         refreshData();
+  //       }
+  //     } else {
+  //       // --- ADD USER LOGIC ---
+  //       const newRoleId = generateRoleId('DIV');
+  //       dataToSubmit.roleId = [newRoleId];
         
-        const result = await dispatch(addUser(dataToSubmit) as any);
-        if (result) {
-            toast.success("DIV User added successfully!");
-            setIsModalOpen(false);
-            dispatch(fetchUsers({ page: 1, role: 'DIV' }));
-            dispatch({ type: 'users/setCurrentPage', payload: 1 });
-        }
-      }
-    } catch (error: any) {
-        toast.error(error.message || "Failed to save DIV user");
-    } finally {
-      setFormLoading(false);
-    }
-  };
+  //       const result = await dispatch(addUser(dataToSubmit) as any);
+  //       if (result) {
+  //           toast.success("DIV User added successfully!");
+  //           setIsModalOpen(false);
+  //           dispatch(fetchUsers({ page: 1, role: 'DIV' }));
+  //           dispatch({ type: 'users/setCurrentPage', payload: 1 });
+  //       }
+  //     }
+  //   } catch (error: any) {
+  //       toast.error(error.message || "Failed to save DIV user");
+  //   } finally {
+  //     setFormLoading(false);
+  //   }
+  // };
 
   // --- MODIFICATION START ---
   // Added a check to prevent opening the delete modal for protected users.
@@ -366,14 +366,14 @@ export default function DivUsers() {
                               <Eye className="w-4 h-4 text-blue-600" />
                             </Link>
                           </Button>
-                          <Button 
+                          {/* <Button 
                             size="icon" 
                             variant="ghost" 
                             onClick={() => openEditModal(user)} 
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />
-                          </Button>
+                          </Button> */}
                           {/* --- MODIFICATION START --- */}
                               {/* The delete button is now disabled if the user's ID is in the protected list */}
                               {(user._id && !protectedUserIds.includes(user._id)) && <Button 
@@ -448,7 +448,7 @@ export default function DivUsers() {
               {editUser ? 'Update the details for this DIV user.' : 'Fill in the details for the new DIV user.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4 mt-2 max-h-[70vh] overflow-y-auto pr-4">
+          <form  className="space-y-4 mt-2 max-h-[70vh] overflow-y-auto pr-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name*</Label>
