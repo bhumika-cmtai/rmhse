@@ -106,7 +106,7 @@ const ICard = ({ user }: ICardProps) => {
         <p className="text-sm font-semibold text-gray-500">{user.role || 'JOB POSITION'}</p>
       </div>
 
-      <div className="text-center mt-2 w-full text-sm z-10 space-y-2 pl-4 text-gray-900 z-10">
+      <div className="text-center mt-2 w-full text-sm z-10 space-y-2 pl-4 text-gray-900">
         <div className="flex"><span className="font-bold w-28">Name</span><span className="font-bold mr-2">:</span><span>{user.name || 'XXXXXXXX'}</span></div>
         <div className="flex"><span className="font-bold w-28">Father Name</span><span className="font-bold mr-2">:</span><span>{user.fatherName || 'XXXXXXXXXX'}</span></div>
         <div className="flex"><span className="font-bold w-28">D.O.B</span><span className="font-bold mr-2">:</span><span>{formatDate(user.dob)}</span></div>
