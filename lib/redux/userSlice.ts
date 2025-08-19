@@ -206,7 +206,7 @@ export const addUser = (formData: FormData) => async (dispatch: Dispatch) => {
     // Axios will automatically set the correct headers for FormData
     const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/addUser`, formData);
     if (response.data) {
-      console.log(response.data);
+      // console.log(response.data);
       dispatch(setLoading(false));
       return response.data;
     } else {
@@ -228,7 +228,7 @@ export const updateUser = (id: string, formData: FormData) => async (dispatch: D
     // Axios will automatically set the correct headers for FormData
     const response = await axios.put(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/updateUser/${id}`, formData);
     if (response.data) {
-      console.log(response.data);
+      // console.log(response.data);
       dispatch(setLoading(false));
       return response.data;
     } else {
@@ -288,11 +288,11 @@ export const getCommissionHistory = (userId: string) => async (dispatch: Dispatc
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/users/commission-history/${userId}`,
       // { headers: { 'Authorization': `Bearer ${token}` } } // Pass the token in the header
     );
-    console.log(response)
+    // console.log(response)
 
     // Assuming the API returns a structure like { success: true, data: [...] }
     if (response.data) {
-      console.log(response.data)
+      // console.log(response.data)
       dispatch(setCommissionHistory(response.data.data));
     } else {
       dispatch(setError(response.data.message || 'Failed to fetch commission history'));

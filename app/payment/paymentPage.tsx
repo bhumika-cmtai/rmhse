@@ -92,7 +92,7 @@ const PaymentPage = () => {
               // const newRoleId = generateRoleId("MEM");
               // //const joinId = 
               const referrerId = await assignRefferer("DIV");
-              console.log(referrerId)
+              // console.log(referrerId)
               // 2. Call the new endpoint to activate the user
               const activationResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/activate-user`, {
                 method: 'PUT',
@@ -173,7 +173,9 @@ const PaymentPage = () => {
         
         <div className="text-center p-6 bg-blue-50 rounded-lg">
             <p className="text-lg font-medium text-gray-700">Amount to Pay</p>
-            <p className="text-4xl font-bold text-blue-600">₹{paymentAmount.toFixed(2)}</p>
+            <p className="text-4xl font-bold text-blue-600">₹{paymentAmount.toFixed(2)}
+            ₹{paymentAmount != null ? Number(paymentAmount).toFixed(2) : "-"}
+            </p>
         </div>
 
         <Button

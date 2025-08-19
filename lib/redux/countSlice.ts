@@ -159,7 +159,7 @@ export const fetchUserDashboardCounts = (userId: string) => async (dispatch: Dis
         };
 
         dispatch(setUserDashboardCounts(userCounts));
-        console.log(userCounts)
+        // console.log(userCounts)
 
     } catch (error: any) {
         const message = error.response?.data?.message || "Failed to fetch user dashboard data.";

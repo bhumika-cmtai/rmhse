@@ -20,13 +20,13 @@ export default function DashboardPage() {
 
       // Redirect based on user role
       if (user.role === 'admin') {
-        console.log("dashboard page admin")
+        // console.log("dashboard page admin")
         router.push('/dashboard/admin');
       } else if (user.role === 'user') {
-        console.log("dashboard page user")
+        // console.log("dashboard page user")
         router.push('/dashboard/user');
       } else {
-        console.log("dashboard page unknown")
+        // console.log("dashboard page unknown")
         // Fallback for unknown roles
         router.push('/login');
       }

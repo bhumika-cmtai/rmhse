@@ -103,7 +103,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
       // Dispatch the action to fetch the user by their ID
       dispatch(fetchUserById(resolvedParams.id) as any);
     }
-    console.log(user, "user")
+    // console.log(user, "user")
     // Cleanup function: runs when the component unmounts
     return () => {
       // Clear the selected user from the store to avoid showing stale data

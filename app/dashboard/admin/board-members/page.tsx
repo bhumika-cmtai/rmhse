@@ -86,7 +86,7 @@ const initialFormState: Omit<User, '_id' | 'createdOn'> = {
   permanentAddress: "",
   password: "",
   role: "BM", // Default role is BM
-  status: "Active",
+  status: "active",
   income: 0,
   account_number: "",
   Ifsc: "",
@@ -170,7 +170,7 @@ export default function DivUsers() {
       permanentAddress: user.permanentAddress ?? '',
       password: '',
       role: user.role ?? 'BM', // Ensure role is set, default to BM
-      status: user.status ?? 'Active',
+      status: user.status ?? 'active',
       income: user.income ?? 0,
       account_number: user.account_number ?? '',
       Ifsc: user.Ifsc ?? '',
@@ -196,7 +196,7 @@ export default function DivUsers() {
   const handleStatusToggle = () => {
     setForm(prevForm => ({
       ...prevForm,
-      status: prevForm.status === 'Active' ? 'Block' : 'Active'
+      status: prevForm.status === 'active' ? 'block' : 'active'
     }));
   };
 
@@ -286,8 +286,8 @@ export default function DivUsers() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Block">Block</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="block">Block</SelectItem>
             </SelectContent>
           </Select>
           {/* <Button size="sm" className="gap-1" onClick={openAddModal}>
@@ -350,7 +350,7 @@ export default function DivUsers() {
                         <Badge variant="outline">{user.role}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={user.status === 'Block' ? "destructive" : "default"}>
+                        <Badge variant={user.status === 'block' ? "destructive" : "default"}>
                           {user.status}
                         </Badge>
                       </TableCell>
@@ -521,7 +521,7 @@ export default function DivUsers() {
                 <div className="space-y-2">
                   <Label>Status</Label>
                   <div>
-                    <Badge variant={form.status === 'Block' ? 'destructive' : 'default'}>
+                    <Badge variant={form.status === 'block' ? 'destructive' : 'default'}>
                       {form.status}
                     </Badge>
                   </div>
@@ -537,8 +537,8 @@ export default function DivUsers() {
                       <SelectValue/>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Block">Block</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="block">Block</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -577,12 +577,12 @@ export default function DivUsers() {
               {editUser && (
                 <Button 
                   type="button" 
-                  variant={form.status === 'Active' ? 'destructive' : 'secondary'} 
+                  variant={form.status === 'active' ? 'destructive' : 'secondary'} 
                   onClick={handleStatusToggle} 
                   disabled={formLoading} 
                   className="mr-auto"
                 >
-                  {form.status === 'Active' ? 'Block User' : 'Activate User'}
+                  {form.status === 'active' ? 'Block User' : 'Activate User'}
                 </Button>
               )}
               <DialogClose asChild>

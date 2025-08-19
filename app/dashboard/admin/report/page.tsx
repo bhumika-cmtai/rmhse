@@ -86,7 +86,7 @@ export default function ReportPage() {
 
 
         const results = await Promise.all(countPromises);
-        console.log(results)
+        // console.log(results)
         const newCounts = new Map<string, number>();
         results.forEach(result => {
           newCounts.set(result.userId, result.count);

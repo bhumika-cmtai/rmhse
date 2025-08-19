@@ -214,7 +214,7 @@ export default function ExtendRequestPage() {
   useEffect(() => {
     dispatch(getAllExtends());
   }, [dispatch]);
-  console.log(extendRequests)
+  // console.log(extendRequests)
   // Handle error display
   useEffect(() => {
     if (error) {

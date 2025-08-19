@@ -150,11 +150,11 @@ export const login = ({ joinId, password, rememberMe }: { joinId: string; passwo
 export const signup = (userData: { name: string; email: string; password: string; phoneNumber: string; dob?: string;fatherName?: string ;status?: string;}) => async (dispatch: Dispatch) => {
   dispatch(setIsLoading(true));
   dispatch(setError(null));
-  console.log()
+  // console.log()
   try {
     const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/signup`, userData);
     if (response.data) {
-      console.log(response.data)
+      // console.log(response.data)
       const { user, token, redirect } = response.data.data;
       
       // Set the cookie

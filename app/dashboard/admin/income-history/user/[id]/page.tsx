@@ -28,7 +28,7 @@ const IncomeHistoryPage = () => {
     useEffect(() => {
         
         if (userId && typeof userId === 'string') {
-            console.log(userId)
+            // console.log(userId)
             // Fetch both the user's details and their commission history
             dispatch(fetchUserById(userId));
             dispatch(getCommissionHistory(userId));
@@ -81,7 +81,7 @@ const IncomeHistoryPage = () => {
                                         <tr key={index}>
                                             <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                                                 <p className=" whitespace-no-wrap font-bold text-green-600">
-                                                    ₹{record.amount? record.amount.toFixed(2): "-"}
+                                                ₹{record.amount != null ? Number(record.amount).toFixed(2) : "-"}
                                                 </p>
                                             </td>
                                             <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">

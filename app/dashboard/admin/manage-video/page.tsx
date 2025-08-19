@@ -47,8 +47,8 @@ const ManageVideoPage = () => {
   // Function to save the new video details to our server
   const saveDetailsToServer = async (videoInfo: { secure_url: string; public_id: string }) => {
     try {
-        console.log(videoInfo.secure_url)
-        console.log(videoInfo.public_id)
+        // console.log(videoInfo.secure_url)
+        // console.log(videoInfo.public_id)
       setStatusMessage("Upload complete! Saving details to server...");
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/video/save-details`, {
