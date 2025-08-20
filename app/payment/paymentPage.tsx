@@ -173,7 +173,7 @@ const PaymentPage = () => {
         
         <div className="text-center p-6 bg-blue-50 rounded-lg">
             <p className="text-lg font-medium text-gray-700">Amount to Pay</p>
-            <p className="text-4xl font-bold text-blue-600">₹{paymentAmount.toFixed(2)}
+            <p className="text-4xl font-bold text-blue-600">
             ₹{paymentAmount != null ? Number(paymentAmount).toFixed(2) : "-"}
             </p>
         </div>
