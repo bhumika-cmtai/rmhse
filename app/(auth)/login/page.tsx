@@ -27,7 +27,7 @@ const LoginPage = () => {
   // Handle authentication state changes
   useEffect(() => {
     if (isAuthenticated && user) {
-      // toast.success("Successfully logged in!");
+      toast.success("Successfully logged in!");
       // console.log("isAuthenticated", isAuthenticated)
       // console.log("user", user)
       // console.log(user)
