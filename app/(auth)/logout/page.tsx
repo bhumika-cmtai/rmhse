@@ -5,5 +5,5 @@ import { cookies } from 'next/headers';
 export default function Logout() {
   Cookies.remove('auth-token');
   // cookies().set('auth-token', '', { expires: new Date(0) })
-  redirect('/login');
+  redirect('/');
 }       
