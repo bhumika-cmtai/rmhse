@@ -139,7 +139,8 @@ export const login = ({ joinId, password, rememberMe }: { joinId: string; passwo
         return null;
       }
     } catch (error: any) {
-      const message = error.response?.data?.message || error.message || "An unknown error occurred.";
+      // console.log(error.response?.data?.errorMessage)
+      const message = error.response?.data?.errorMessage || error.response?.data?.message || error.message || "An unknown error occurred.";
       dispatch(setError(message));
       return null;
     } 

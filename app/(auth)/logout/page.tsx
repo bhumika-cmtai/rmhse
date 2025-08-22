@@ -1,9 +1,12 @@
+"use client"
 import { redirect } from 'next/navigation';
 import Cookies from 'js-cookie';
-import { cookies } from 'next/headers';
 
 export default function Logout() {
-  Cookies.remove('auth-token');
+
+  Cookies.remove('auth-token',{path:''});
   // cookies().set('auth-token', '', { expires: new Date(0) })
+  // Cookies.set('auth-token', '')
+  // dispatch(setUser(null));
   redirect('/');
 }       
