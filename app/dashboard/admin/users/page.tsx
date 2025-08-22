@@ -313,7 +313,7 @@ export default function Users() {
                  users.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center py-8">No users found.</TableCell></TableRow> :
                  users.map((user, idx) => (
                     <TableRow key={user._id}>
-                      <TableCell>{(pagination.currentPage - 1) * 15 + idx + 1}</TableCell>
+                      <TableCell>{(pagination.currentPage - 1) * 14 + idx + 1}</TableCell>
                       <TableCell><div className="flex items-center gap-3"><Avatar><AvatarFallback>{user.name?.[0]?.toUpperCase()}</AvatarFallback></Avatar><span className="font-medium">{user.name}</span></div></TableCell>
                       <TableCell>{user.email}</TableCell><TableCell>{user.phoneNumber}</TableCell>
                       <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
