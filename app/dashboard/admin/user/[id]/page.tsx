@@ -201,7 +201,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
               <div>
                 <DetailItem label="Role"><span className="capitalize">{user.role}</span></DetailItem>
                 <DetailItem label="Join ID"><span className="capitalize">{user.joinId}</span></DetailItem>
-                <DetailItem label="Primary Role ID" value={user.roleId?.[0]} />
+                <DetailItem label="Primary Role ID" value={(user as any).roleId?.length > 0 ? (user as any).roleId.slice(-1) : 'N/A'} />
                 <DetailItem label="All Assigned Role IDs" value={user.roleId?.join(', ')} />
                 <DetailItem label="Referred By" value={user.refferedBy} />
                 <DetailItem label="Status"><Badge variant={user.status === "Block" ? "destructive" : "default"}>{user.status}</Badge></DetailItem>
