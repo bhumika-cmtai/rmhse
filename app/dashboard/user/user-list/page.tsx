@@ -133,6 +133,13 @@ export default function MyReferralsPage() {
   // --- CONFIG FOR THE "ADD USER" BUTTON ---
   // console.log(loggedInUser)
   const getAddButtonConfig = () => {
+    if(!loggedInUser) return null
+    if (loggedInUser.role === 'BM') {
+      if (loggedInUser._id === '68919eeff1dedfbfd356fedb') {
+        return { label: 'Add STAT', role: 'STAT' }; // Allow only this specific BM to add a STAT
+      }
+      return null; // Any other BM will not see the button
+    }
     switch (loggedInUser?.role) {
       case 'DIST': return { label: 'Add DIV', role: 'DIV' };
       case 'STAT': return { label: 'Add DIST', role: 'DIST' };

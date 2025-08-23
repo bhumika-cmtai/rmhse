@@ -198,8 +198,13 @@ export default function Dashboard() {
         { name: "Total Referred Users", value: userStats.referredUsersCount.toLocaleString(), icon: Users },
         { name: "Total Income", value: `₹${userStats.personalIncome.toLocaleString()}`, icon: Banknote },
         { name: "Referral Limit", value: userStats.referralLimit.toLocaleString(), icon: FileText }
-    ];
-
+    ].filter(stat => {
+        // If the user's role is 'BM' and the stat is "Referral Limit", exclude it.
+        if (user.role === 'BM' && stat.name === "Referral Limit") {
+            return false; // Exclude this item from the array
+        }
+        return true; // Include all other items
+    });
     return (
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
