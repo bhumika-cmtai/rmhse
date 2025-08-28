@@ -23,7 +23,7 @@ interface RazorpaySuccessResponse {
 
 // --- START: DONATE MODAL COMPONENT ---
 const DonateModal = ({ onClose, onPayNow }: { onClose: () => void; onPayNow: () => void; }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center backdrop-blur-sm p-4">
+    <div className="fixed inset-0  bg-opacity-50 z-50 flex justify-center items-center backdrop-blur-sm p-4">
       <div className="bg-gray-50 p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-3xl relative border border-gray-200">
         {/* Close Button */}
         <button
@@ -43,16 +43,20 @@ const DonateModal = ({ onClose, onPayNow }: { onClose: () => void; onPayNow: () 
             </h2>
             <div className="space-y-4 text-md">
               <div className="flex justify-between">
-                <p className="text-gray-500">Bank Name:</p>
-                <p className="font-semibold text-gray-800">Example Bank</p>
+                <p className="text-gray-500">Bank:</p>
+                <p className="font-semibold text-gray-800">Axis Bank</p>
               </div>
+              {/* <div className="flex justify-between">
+                <p className="text-gray-500">A/c Name:</p>
+                <p className="font-semibold text-gray-800">Rashtriya Manav Hum Sab Ek</p>
+              </div> */}
               <div className="flex justify-between">
                 <p className="text-gray-500">Account No:</p>
-                <p className="font-semibold text-gray-800">1234567890</p>
+                <p className="font-semibold text-gray-800">921020057959083</p>
               </div>
               <div className="flex justify-between">
                 <p className="text-gray-500">IFSC Code:</p>
-                <p className="font-semibold text-gray-800">EBIL0001234</p>
+                <p className="font-semibold text-gray-800">UTIB0003607</p>
               </div>
             </div>
           </div>
