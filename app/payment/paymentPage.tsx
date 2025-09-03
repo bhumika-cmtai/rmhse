@@ -60,7 +60,7 @@ const PaymentPage = () => {
         key: keyId,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: 'Your Company Name',
+        name: 'RMHSE',
         description: 'Signup Fee',
         order_id: orderData.id,
         // --- MODIFICATION: Updated handler function ---
