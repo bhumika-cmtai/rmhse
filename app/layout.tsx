@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ReduxProvider } from "@/lib/provider";
+import MaintenancePage from "./(website)/MaintainancePage";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,11 +17,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isLive = process.env.NEXT_PUBLIC_IS_LIVE === "true"; // ✅ check env properly
+
   return (
     <html lang="en">
       <body className={inter.className}>
         <ReduxProvider>
-          {children}
+          {isLive ? <MaintenancePage /> : children}
           <Toaster richColors />
         </ReduxProvider>
       </body>
