@@ -1,35 +1,16 @@
+// users/page.tsx
+
 "use client";
 import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image"; // Using Next.js Image for optimization
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Loader2, Eye, Users as UsersIcon, Upload } from "lucide-react";
@@ -56,7 +37,6 @@ import { assignRefferer } from "@/lib/userActions";
 
 const protectedUserIds = [ "689196e09a69b409d03f86e8", "689197399a69b409d03f86eb", "68919d7ef1dedfbfd356fecc", "68919e48f1dedfbfd356fed8", "68919eeff1dedfbfd356fedb", "6891a224d7169e1e22af1b29", "6893b75941efc3a7afaf577b", "68940391362687a7140c4c7f", "689404c3362687a7140c4c85", "6894053d362687a7140c4c8a", "689406be6513e46810ca48ae", "689407781df54db8eed4af74", "689407b01df54db8eed4af79", "6894100d347fa8583c039093", "68997ec02c34f4a42de310c7" ];
 
-// --- MODIFICATION: Expanded initial state with all new fields ---
 const initialFormState: Omit<User, '_id' | 'createdOn' | 'roleId' | 'joinId' | 'refferedBy' | 'memberId' | 'status'> & { password?: string } = {
   name: "",
   email: "",
@@ -97,10 +77,8 @@ export default function Users() {
   const [form, setForm] = useState(initialFormState);
   const [formLoading, setFormLoading] = useState(false);
 
-  // --- MODIFICATION START: State for file handling ---
   const [documentFiles, setDocumentFiles] = useState<{ pancard: File | null; adharFront: File | null; adharBack: File | null; }>({ pancard: null, adharFront: null, adharBack: null });
   const [documentPreviews, setDocumentPreviews] = useState({ pancard: '', adharFront: '', adharBack: '' });
-  // --- MODIFICATION END ---
 
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -116,16 +94,24 @@ export default function Users() {
     if (debouncedSearch) params.search = debouncedSearch;
     dispatch(fetchUsers(params));
   }, [dispatch, debouncedSearch, status, roleFilter, pagination.currentPage]);
-
+  
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(search), 500);
     return () => clearTimeout(handler);
   }, [search]);
 
+  // --- FIX: Cleanup hook with empty dependency array [] ---
+  useEffect(() => {
+    return () => {
+      dispatch({ type: 'users/setCurrentPage', payload: 1 });
+    };
+  }, []);
+
   useEffect(() => { if (error) toast.error(error); }, [error]);
 
   const handleStatusChange = useCallback((val: string) => setStatus(val), []);
   const handleRoleChange = useCallback((val: string) => setRoleFilter(val), []);
+
   const handlePageChange = useCallback((newPage: number) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
       dispatch({ type: 'users/setCurrentPage', payload: newPage });
@@ -136,7 +122,6 @@ export default function Users() {
     dispatch(fetchUsers({ page: pagination.currentPage, role: roleFilter, status, search: debouncedSearch }));
   }, [dispatch, pagination.currentPage, roleFilter, status, debouncedSearch]);
 
-  // --- MODIFICATION START: Reset file states when modal opens/closes ---
   const resetFileStates = () => {
     setDocumentFiles({ pancard: null, adharFront: null, adharBack: null });
     setDocumentPreviews({ pancard: '', adharFront: '', adharBack: '' });
@@ -159,17 +144,14 @@ export default function Users() {
       gender: user.gender ?? 'male', role: user.role ?? 'MEM', dob: dobForInput,
       account_number: user.account_number ?? '', Ifsc: user.Ifsc ?? '', upi_id: user.upi_id ?? '', income: user.income ?? 0
     });
-    // Set existing document previews from user data
     setDocumentPreviews({
         pancard: user.pancard || '',
         adharFront: user.adharFront || '',
         adharBack: user.adharBack || ''
     });
-    // Clear any lingering file selections from a previous modal session
     setDocumentFiles({ pancard: null, adharFront: null, adharBack: null });
     setIsModalOpen(true);
   };
-  // --- MODIFICATION END ---
   
   const handleFormChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -180,12 +162,11 @@ export default function Users() {
     setForm(prev => ({ ...prev, [fieldName]: value as any }));
   };
 
-  // --- MODIFICATION START: File change handler with size validation ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files[0]) {
       const file = files[0];
-      const maxFileSize = 2 * 1024 * 1024; // 2 MB
+      const maxFileSize = 2 * 1024 * 1024;
       if (file.size > maxFileSize) {
         toast.error("File size cannot exceed 2 MB.");
         e.target.value = '';
@@ -195,23 +176,18 @@ export default function Users() {
       setDocumentPreviews(prev => ({ ...prev, [name]: URL.createObjectURL(file) }));
     }
   };
-  // --- MODIFICATION END ---
 
-  // --- MODIFICATION START: Form submission using FormData ---
   const handleFormSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormLoading(true);
 
     const formData = new FormData();
 
-    // Append all text fields from the form state
     Object.entries(form).forEach(([key, value]) => {
-        // Don't append password if it's for an edit and is empty
         if (key === 'password' && editUser && !value) return;
         formData.append(key, String(value));
     });
 
-    // Append file fields only if a new file has been selected
     Object.entries(documentFiles).forEach(([key, file]) => {
         if (file) {
             formData.append(key, file);
@@ -231,7 +207,7 @@ export default function Users() {
             case 'STAT': refferedBy = await assignRefferer('BM'); break;
         }
         formData.append('refferedBy', refferedBy);
-        formData.append('status', 'active'); // Default status for new users
+        formData.append('status', 'active');
 
         await dispatch(addUser(formData as any));
         toast.success("User added successfully!");
@@ -244,7 +220,6 @@ export default function Users() {
       setFormLoading(false);
     }
   };
-  // --- MODIFICATION END ---
 
   const openDeleteModal = (user: User) => {
     if (user._id && protectedUserIds.includes(user._id)) {
@@ -309,8 +284,24 @@ export default function Users() {
             <Table>
               <TableHeader><TableRow><TableHead className="w-16">S.No.</TableHead><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Income</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {loading ? <TableRow><TableCell colSpan={8} className="text-center py-8"><div className="flex justify-center items-center gap-2"><Loader2 className="h-6 w-6 animate-spin" /><span>Loading...</span></div></TableCell></TableRow> :
-                 users.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center py-8">No users found.</TableCell></TableRow> :
+              {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8}>
+                      <div className="flex justify-center items-center min-h-[400px]">
+                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                        <span>Loading...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8}>
+                       <div className="flex justify-center items-center min-h-[400px]">
+                        No users found.
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
                  users.map((user, idx) => (
                     <TableRow key={user._id}>
                       <TableCell>{(pagination.currentPage - 1) * 14 + idx + 1}</TableCell>
@@ -326,7 +317,8 @@ export default function Users() {
                         {user._id && !protectedUserIds.includes(user._id) && <Button size="icon" variant="ghost" onClick={() => openDeleteModal(user)} title="Delete"><Trash2 className="w-4 h-4 text-red-500" /></Button>}
                       </div></TableCell>
                     </TableRow>
-                  ))}
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -341,12 +333,10 @@ export default function Users() {
         <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); handlePageChange(pagination.currentPage + 1); }} className={pagination.currentPage === pagination.totalPages ? "pointer-events-none opacity-50" : ""} /></PaginationItem>
       </PaginationContent></Pagination></div>}
 
-      {/* --- MODIFICATION: Updated Modal with all new fields --- */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[800px] overflow-y-auto"><DialogHeader><DialogTitle>{editUser ? 'Edit User' : 'Add New User'}</DialogTitle><DialogDescription>{editUser ? 'Update user details.' : 'Fill in details for a new user.'}</DialogDescription></DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4 mt-2 max-h-[80vh] pr-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-              {/* Personal Details */}
               <div className="space-y-2"><Label htmlFor="name">Name</Label><Input id="name" name="name" value={form.name} onChange={handleFormChange} required /></div>
               <div className="space-y-2"><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" value={form.email} onChange={handleFormChange} required /></div>
               <div className="space-y-2"><Label htmlFor="phoneNumber">Phone Number</Label><Input id="phoneNumber" name="phoneNumber" value={form.phoneNumber} onChange={handleFormChange} required /></div>
@@ -359,13 +349,11 @@ export default function Users() {
               <div className="space-y-2 md:col-span-2"><Label htmlFor="permanentAddress">Permanent Address</Label><Textarea id="permanentAddress" name="permanentAddress" value={form.permanentAddress} onChange={handleFormChange} /></div>
               <div className="space-y-2 md:col-span-2"><Label htmlFor="password">Password</Label><Input id="password" name="password" type="password" value={form.password} onChange={handleFormChange} placeholder={editUser ? "Leave blank to keep current" : ""} required={!editUser} /></div>
 
-              {/* Bank Details */}
               <div className="md:col-span-2"><hr className="my-2" /><h3 className="font-semibold text-lg">Bank Details</h3></div>
               <div className="space-y-2"><Label htmlFor="account_number">Account Number</Label><Input id="account_number" name="account_number" value={form.account_number} onChange={handleFormChange} /></div>
               <div className="space-y-2"><Label htmlFor="Ifsc">IFSC Code</Label><Input id="Ifsc" name="Ifsc" value={form.Ifsc} onChange={handleFormChange} /></div>
               <div className="space-y-2 md:col-span-2"><Label htmlFor="upi_id">UPI ID</Label><Input id="upi_id" name="upi_id" value={form.upi_id} onChange={handleFormChange} /></div>
               
-              {/* Document Uploads */}
               <div className="md:col-span-2"><hr className="my-2" /><h3 className="font-semibold text-lg">Documents</h3></div>
               <div className="space-y-2">
                 <Label htmlFor="pancard">PAN Card</Label>

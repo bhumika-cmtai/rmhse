@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback } from "react";
+import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -47,7 +47,8 @@ import {
   selectLoading, 
   selectError, 
   selectPagination,
-  User 
+  User, 
+  setCurrentPage
 } from "@/lib/redux/userSlice";
 import { AppDispatch, RootState } from "@/lib/store";
 import { generateRoleId } from "@/lib/userActions";
@@ -123,9 +124,16 @@ export default function DivUsers() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const isInitialMount = useRef(true);
+
 
   // MODIFIED: The role is now hardcoded to 'STAT' in the fetchUsers call.
   useEffect(() => {
+    if (isInitialMount.current && pagination.currentPage > 1) {
+      dispatch(setCurrentPage(1));
+      isInitialMount.current = false; 
+      return;
+    }
     const params: any = {
       page: pagination.currentPage,
       role: 'STAT', // Always fetch users with the 'STAT' role
@@ -136,6 +144,13 @@ export default function DivUsers() {
     
     dispatch(fetchUsers(params));
   }, [dispatch, debouncedSearch, status, pagination.currentPage]); // REMOVED: `roleFilter` from dependencies
+
+  useEffect(() => {
+    // Return a cleanup function that will be called when the component unmounts
+    return () => {
+      dispatch({ type: 'users/setCurrentPage', payload: 1 });
+    };
+  }, [dispatch]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
