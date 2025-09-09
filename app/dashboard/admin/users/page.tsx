@@ -21,7 +21,7 @@ import { DeleteConfirmationModal } from "@/app/components/ui/delete-confirmation
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchUsers,
-  addUser,
+  addUserByAdmin,
   updateUser,
   deleteUser,
   selectUsers,
@@ -37,7 +37,7 @@ import { assignRefferer } from "@/lib/userActions";
 
 const protectedUserIds = [ "689196e09a69b409d03f86e8", "689197399a69b409d03f86eb", "68919d7ef1dedfbfd356fecc", "68919e48f1dedfbfd356fed8", "68919eeff1dedfbfd356fedb", "6891a224d7169e1e22af1b29", "6893b75941efc3a7afaf577b", "68940391362687a7140c4c7f", "689404c3362687a7140c4c85", "6894053d362687a7140c4c8a", "689406be6513e46810ca48ae", "689407781df54db8eed4af74", "689407b01df54db8eed4af79", "6894100d347fa8583c039093", "68997ec02c34f4a42de310c7" ];
 
-const initialFormState: Omit<User, '_id' | 'createdOn' | 'roleId' | 'joinId' | 'refferedBy' | 'memberId' | 'status'> & { password?: string } = {
+const initialFormState: Omit<User, '_id' | 'createdOn' | 'roleId' | 'joinId'  | 'memberId' | 'status'> & { password?: string } = {
   name: "",
   email: "",
   phoneNumber: "",
@@ -48,6 +48,7 @@ const initialFormState: Omit<User, '_id' | 'createdOn' | 'roleId' | 'joinId' | '
   currentAddress: "",
   gender: "male",
   role: "MEM",
+  refferedBy: "",
   pancard: "",
   adharFront: "",
   adharBack: "",
@@ -141,7 +142,8 @@ export default function Users() {
       name: user.name ?? '', email: user.email ?? '', phoneNumber: user.phoneNumber ?? '',
       password: '', fatherName: user.fatherName ?? '', emergencyNumber: user.emergencyNumber ?? '',
       currentAddress: user.currentAddress ?? '', permanentAddress: user.permanentAddress ?? '',
-      gender: user.gender ?? 'male', role: user.role ?? 'MEM', dob: dobForInput,
+      gender: user.gender ?? 'male', role: user.role ?? 'MEM',
+      refferedBy: user.refferedBy ?? '',  dob: dobForInput,
       account_number: user.account_number ?? '', Ifsc: user.Ifsc ?? '', upi_id: user.upi_id ?? '', income: user.income ?? 0
     });
     setDocumentPreviews({
@@ -199,17 +201,13 @@ export default function Users() {
         await dispatch(updateUser(editUser._id, formData as any));
         toast.success("User updated successfully!");
       } else {
-        let refferedBy = 'ADMIN001';
-        switch (form.role) {
-            case 'MEM': refferedBy = await assignRefferer('DIV'); break;
-            case 'DIV': refferedBy = await assignRefferer('DIST'); break;
-            case 'DIST': refferedBy = await assignRefferer('STAT'); break;
-            case 'STAT': refferedBy = await assignRefferer('BM'); break;
-        }
-        formData.append('refferedBy', refferedBy);
-        formData.append('status', 'active');
+        // --- CHANGE 2: ADD NEW USER LOGIC (SIMPLIFIED) ---
+        // Automatic 'assignRefferer' wala poora logic hata diya gaya hai.
+        // Form se jo 'refferedBy' ki value aayi hai, wahi use hogi.
+        
+        // formData.append('status', 'active');
 
-        await dispatch(addUser(formData as any));
+        await dispatch(addUserByAdmin(formData as any));
         toast.success("User added successfully!");
       }
       setIsModalOpen(false);
@@ -345,6 +343,17 @@ export default function Users() {
               <div className="space-y-2"><Label htmlFor="gender">Gender</Label><Select name="gender" value={form.gender} onValueChange={(v) => handleFormSelectChange('gender', v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="male">Male</SelectItem><SelectItem value="female">Female</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div>
               <div className="space-y-2"><Label htmlFor="emergencyNumber">Emergency Number</Label><Input id="emergencyNumber" name="emergencyNumber" value={form.emergencyNumber} onChange={handleFormChange} /></div>
               <div className="space-y-2"><Label htmlFor="role">Role</Label><Select name="role" value={form.role} onValueChange={(v) => handleFormSelectChange('role', v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="MEM">MEM</SelectItem><SelectItem value="DIV">DIV</SelectItem><SelectItem value="DIST">DIST</SelectItem><SelectItem value="STAT">STAT</SelectItem><SelectItem value="BM">BM</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2">
+                <Label htmlFor="refferedBy">Referred By</Label>
+                <Input 
+                  id="refferedBy" 
+                  name="refferedBy" 
+                  value={form.refferedBy} 
+                  onChange={handleFormChange}
+                  required={true}
+                  placeholder="Leave blank to assign automatically"
+                />
+              </div>
               <div className="space-y-2 md:col-span-2"><Label htmlFor="currentAddress">Current Address</Label><Textarea id="currentAddress" name="currentAddress" value={form.currentAddress} onChange={handleFormChange} /></div>
               <div className="space-y-2 md:col-span-2"><Label htmlFor="permanentAddress">Permanent Address</Label><Textarea id="permanentAddress" name="permanentAddress" value={form.permanentAddress} onChange={handleFormChange} /></div>
               <div className="space-y-2 md:col-span-2"><Label htmlFor="password">Password</Label><Input id="password" name="password" type="password" value={form.password} onChange={handleFormChange} placeholder={editUser ? "Leave blank to keep current" : ""} required={!editUser} /></div>

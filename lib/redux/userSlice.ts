@@ -199,20 +199,48 @@ export const addUser = (formData: FormData) => async (dispatch: Dispatch) => {
   dispatch(setLoading(true));
   try {
     const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/addUser`, formData);
-    if (response.data) {
-      dispatch(setLoading(false));
-      return response.data;
-    } else {
-      dispatch(setError(response.data.message));
-      return null;
-    }
+    
+    dispatch(setLoading(false));
+    return response.data;
+
   } catch (error: unknown) {
     const axiosError = error as AxiosError;
-    const message = (axiosError.response?.data as any)?.message || axiosError.message || "Unknown error occurred";
+    
+    const message = 
+      (axiosError.response?.data as any)?.errorMessage ||
+      (axiosError.response?.data as any)?.message ||      
+      axiosError.message || 
+      "An unknown error occurred";
+      
     dispatch(setError(message));
+
     throw new Error(message);
   }
 };
+
+export const addUserByAdmin = (formData: FormData) => async (dispatch: Dispatch) => {
+  dispatch(setLoading(true));
+  try {
+    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/addUserByAdmin`, formData);
+    
+    dispatch(setLoading(false));
+    return response.data;
+
+  } catch (error: unknown) {
+    const axiosError = error as AxiosError;
+    
+    const message = 
+      (axiosError.response?.data as any)?.errorMessage ||
+      (axiosError.response?.data as any)?.message ||      
+      axiosError.message || 
+      "An unknown error occurred";
+      
+    dispatch(setError(message));
+
+    throw new Error(message);
+  }
+};
+
 
 export const updateUser = (id: string, formData: FormData) => async (dispatch: Dispatch) => {
   dispatch(setLoading(true));
