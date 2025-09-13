@@ -199,10 +199,10 @@ export default function MyReferralsPage() {
         endpoint = `${process.env.NEXT_PUBLIC_API_BASE_URL}/users/addUserByAdmin`;
       }
       
-      await axios.post(endpoint, payload, {
+      const response = await axios.post(endpoint, payload, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-
+      // console.log(response)
       toast.success(`User (${buttonConfig.role}) added successfully!`);
       setIsModalOpen(false);
       if(loggedInUser) {

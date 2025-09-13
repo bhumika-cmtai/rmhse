@@ -5,10 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-// MODIFICATION: Import functions to generate IDs
-import { assignRefferer, generateRoleId } from '@/lib/userActions';
-
-
+// MODIFICATION 1: Import Redux tools
+import { useDispatch } from 'react-redux';
+import { setUser } from '@/lib/redux/authSlice'; // Assuming authSlice is here
+import { assignRefferer } from '@/lib/userActions';
 
 
 const PaymentPage = () => {
@@ -16,8 +16,11 @@ const PaymentPage = () => {
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId');
   
-  const [loading, setLoading] = useState(false); // For creating the order
-  const [isVerifying, setIsVerifying] = useState(false); // --- New state for verification ---
+  // MODIFICATION 2: Initialize the useDispatch hook
+  const dispatch = useDispatch();
+  
+  const [loading, setLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(350);
 
   const loadRazorpayScript = () => {
@@ -41,7 +44,6 @@ const PaymentPage = () => {
     }
 
     try {
-      // Step 1: Create the order
       const orderResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/payment/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,11 +53,9 @@ const PaymentPage = () => {
       const orderData = await orderResponse.json();
       if (!orderResponse.ok) throw new Error(orderData.error || 'Failed to create order');
 
-      // Step 2: Get the Razorpay Key ID
       const keyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/razorpay-key`);
       const { keyId } = await keyResponse.json();
 
-      // Step 3: Configure and open the Razorpay checkout
       const options = {
         key: keyId,
         amount: orderData.amount,
@@ -63,9 +63,8 @@ const PaymentPage = () => {
         name: 'RMHSE',
         description: 'Signup Fee',
         order_id: orderData.id,
-        // --- MODIFICATION: Updated handler function ---
         handler: async function (response: any) {
-          setIsVerifying(true); // Start the verification UI state
+          setIsVerifying(true);
           toast.loading('Verifying your payment...');
 
           try {
@@ -82,52 +81,53 @@ const PaymentPage = () => {
 
             const verificationData = await verificationResponse.json();
             
-            toast.dismiss(); // Dismiss the "Verifying..." toast
+            toast.dismiss();
 
             if (verificationData.status === 'success') {
-              toast.success('Payment successful! Redirecting...');
+              toast.success('Payment successful! Activating your account...');
 
-              // --- NEW LOGIC AFTER SUCCESSFUL PAYMENT ---
-              // 1. Generate the necessary IDs
-              // const newRoleId = generateRoleId("MEM");
-              // //const joinId = 
               const referrerId = await assignRefferer("DIV");
-              // console.log(referrerId)
-              // 2. Call the new endpoint to activate the user
+              
               const activationResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/activate-user`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   userId: userId,
-                  // roleId: newRoleId,
                   refferedBy: referrerId,
                   status: "active"
                 }),
               });
 
+              // MODIFICATION 3: Get the updated user data from the activation response
+              const activationData = await activationResponse.json();
+
               if (!activationResponse.ok) {
-                throw new Error('Failed to activate your account. Please contact support.');
-             }
+                 // Use the error message from the server's response
+                 throw new Error(activationData.message || 'Failed to activate your account. Please contact support.');
+              }
              
-             // 3. Redirect to the dashboard
-             toast.success('Account activated! Redirecting...');
-             router.push('/dashboard/user');
+              // MODIFICATION 4: Update the Redux state with the new user data
+              // This assumes your API returns the updated user object under a `data` key.
+              if (activationData.data) {
+                dispatch(setUser(activationData.data));
+              }
 
+              // MODIFICATION 5: Redirect to the dashboard
+              toast.success('Account activated! Redirecting...');
+              router.push('/dashboard/user'); // Only one redirect is needed.
 
-              router.push('/dashboard/user');
             } else {
               toast.error(verificationData.message || 'Payment verification failed. Please contact support.');
             }
-          } catch (err) {
+          } catch (err: any) { // Explicitly type 'err' as 'any' to access '.message'
             toast.dismiss();
-            toast.error('An error occurred during verification.');
+            // Use the error message from the caught error
+            toast.error(err.message || 'An error occurred during verification.');
           } finally {
-            setIsVerifying(false); // Stop the verification UI state
+            setIsVerifying(false);
           }
         },
-        prefill: {
-          // You can prefill user details here if you have them
-        },
+        prefill: {},
         theme: {
           color: '#3399cc',
         },
@@ -140,7 +140,7 @@ const PaymentPage = () => {
     } catch (error: any) {
       toast.error(error.message || 'An error occurred during payment.');
     } finally {
-      setLoading(false); // This stops loading once the Razorpay modal opens
+      setLoading(false);
     }
   };
 
@@ -154,7 +154,6 @@ const PaymentPage = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 relative">
-      {/* --- MODIFICATION: Verification Overlay --- */}
       {isVerifying && (
         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-50">
           <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
@@ -181,7 +180,7 @@ const PaymentPage = () => {
         <Button
           onClick={handlePayment}
           className="w-full py-3 text-lg font-semibold text-white bg-green-500 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-300"
-          disabled={loading || isVerifying || !userId} // --- Disable button during verification ---
+          disabled={loading || isVerifying || !userId}
         >
           {loading ? (
             <>
