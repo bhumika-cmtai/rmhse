@@ -158,7 +158,7 @@ export default function Dashboard() {
             
             // Check if the action was fulfilled and has a payload
             if (resultAction) {
-                toast.success(`Congratulations! You've been upgraded to ${resultAction.payload.role}.`, { id: toastId });
+                toast.success(`Congratulations! You've been upgraded to ${resultAction.role}.`, { id: toastId });
             } else {
                 // Handle rejected case
                 const errorMessage = (resultAction.payload as any)?.message || "Upgrade failed. Please contact support.";
